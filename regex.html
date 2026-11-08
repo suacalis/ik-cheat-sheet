@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Düzenli İfadeler (RegEx) ile İK Metin Temizleme · Aranabilir Etkileşimli Kopya Kâğıdı</title>
+<script src="https://cdn.jsdelivr.net/pyodide/v0.27.7/full/pyodide.js"></script>
+<style>
+  :root{
+    --bg:#f5f6fa; --card:#fff; --ink:#1f2937; --muted:#6b7280; --line:#e5e7eb;
+    --accent:#7b2cbf; --accent-d:#5a189a; --accent-l:#f3e8ff;
+    --code:#0b1220; --codeink:#e5e7eb; --warn:#fff7e6; --warnb:#f59e0b; --err:#b91c1c;
+  }
+  *{box-sizing:border-box}
+  html{scroll-padding-top:150px}
+  body{margin:0;font-family:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);line-height:1.55}
+  header{background:linear-gradient(120deg,var(--accent-d),var(--accent));color:#fff;padding:26px 24px 18px}
+  header h1{margin:0 0 4px;font-size:1.65rem}
+  header p{margin:0;opacity:.92;max-width:980px;font-size:.96rem}
+  .durum{margin-top:12px;display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.16);padding:5px 12px;border-radius:999px;font-size:.88rem}
+  .nokta{width:10px;height:10px;border-radius:50%;background:#fbbf24;animation:nabiz 1s infinite}
+  .nokta.hazir{background:#4ade80;animation:none} .nokta.hata{background:#f87171;animation:none}
+  @keyframes nabiz{50%{opacity:.3}}
+  .ara-kutu{position:sticky;top:0;z-index:20;background:rgba(245,246,250,.96);backdrop-filter:blur(6px);border-bottom:1px solid var(--line);padding:12px 24px}
+  .ara-ic{max-width:1300px;margin:0 auto}
+  .ara-satir{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  #ara{flex:1;min-width:260px;font-size:1rem;padding:11px 14px 11px 40px;border:2px solid #cfd8dc;border-radius:10px;outline:none;
+       background:#fff url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="%236b7280" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>') no-repeat 13px center}
+  #ara:focus{border-color:var(--accent)}
+  #sonucSayisi{font-size:.9rem;color:var(--muted);min-width:120px}
+  .btn{border:0;border-radius:8px;padding:9px 14px;font-size:.88rem;cursor:pointer;font-weight:600;background:var(--accent);color:#fff}
+  .btn.ikincil{background:#fff;color:var(--accent);border:1px solid var(--accent)}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .cipler{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
+  .cip{border:1px solid #cfd8dc;background:#fff;border-radius:999px;padding:3px 11px;font-size:.8rem;cursor:pointer;color:#374151}
+  .cip.aktif{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .cip .say{opacity:.7;margin-left:3px}
+  .oneriler{font-size:.8rem;color:var(--muted);margin-top:7px}
+  .oneriler a{color:var(--accent);cursor:pointer;margin-right:8px;text-decoration:underline dotted}
+  .yerlesim{display:grid;grid-template-columns:230px 1fr;gap:22px;max-width:1300px;margin:0 auto;padding:20px 24px}
+  nav{position:sticky;top:150px;align-self:start;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;max-height:calc(100vh - 170px);overflow:auto}
+  nav h3{margin:0 0 6px;font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+  nav a{display:flex;justify-content:space-between;gap:6px;padding:5px 8px;border-radius:6px;color:var(--ink);text-decoration:none;font-size:.88rem}
+  nav a:hover{background:var(--accent-l);color:var(--accent-d)}
+  nav a .say{color:var(--muted);font-size:.78rem}
+  nav a.bos{opacity:.35}
+  .bolum{margin-bottom:26px}
+  .bolum>h2{margin:0 0 4px;color:var(--accent-d);font-size:1.25rem;border-bottom:2px solid var(--accent-l);padding-bottom:4px}
+  .bolum>.bolum-ac{color:var(--muted);font-size:.9rem;margin:4px 0 10px}
+  .kart{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:12px}
+  .kart-bas{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap}
+  .komut{font-family:"JetBrains Mono","Fira Code",Consolas,monospace;font-size:.95rem;font-weight:700;color:var(--accent-d);background:var(--accent-l);padding:3px 8px;border-radius:6px;word-break:break-all;white-space:pre-wrap}
+  .aciklama{margin:7px 0 2px;font-size:.94rem}
+  .ingilizce{font-size:.8rem;color:var(--muted);font-style:italic}
+  .uyari{background:var(--warn);border-left:4px solid var(--warnb);padding:7px 11px;border-radius:6px;font-size:.86rem;margin:8px 0 2px}
+  mark{background:#fde68a;color:inherit;padding:0 1px;border-radius:2px}
+  .hucre{margin-top:10px;border:1px solid #1f2a44;border-radius:9px;overflow:hidden}
+  .hucre-ust{display:flex;justify-content:space-between;align-items:center;background:#16213a;color:#cbd5e1;padding:5px 9px;font-size:.78rem}
+  .hucre-ust .btns{display:flex;gap:6px}
+  .hucre-ust button{border:0;border-radius:6px;padding:4px 11px;font-size:.78rem;cursor:pointer;font-weight:600}
+  .calistir{background:#22c55e;color:#052e14} .calistir:disabled{background:#475569;color:#cbd5e1;cursor:not-allowed}
+  .sifirla,.kopyala{background:#334155;color:#e2e8f0}
+  textarea.kod{display:block;width:100%;min-height:60px;resize:vertical;border:0;outline:none;background:var(--code);color:var(--codeink);
+    font-family:"JetBrains Mono","Fira Code",Consolas,monospace;font-size:13px;line-height:1.5;padding:10px 12px;tab-size:4;white-space:pre;overflow-x:auto}
+  .cikti{border:1px solid var(--line);border-top:0;border-radius:0 0 9px 9px;margin-top:-3px;max-height:620px;overflow:auto}
+  .cikti:empty{display:none}
+  .cikti pre{margin:0;padding:9px 12px;font-size:12.5px;background:#f9fafb;white-space:pre-wrap}
+  .cikti pre.hata{color:var(--err);background:#fef2f2}
+  .cikti .tablo-sar,.cikti .html-sar{padding:8px 10px}
+  .cikti img{display:block;max-width:100%;height:auto;margin:8px auto;background:#fff}
+  .cikti .img-sar{position:relative;padding:4px 8px}
+  .cikti .img-sar a{position:absolute;right:12px;top:8px;font-size:11px;background:#fff;border:1px solid var(--line);border-radius:6px;padding:2px 7px;color:var(--accent-d);text-decoration:none}
+  table.dataframe{border-collapse:collapse;font-size:12.5px;font-family:Consolas,monospace}
+  table.dataframe th,table.dataframe td{border:1px solid #e5e7eb;padding:4px 8px;text-align:right;white-space:nowrap}
+  table.dataframe thead th{background:#f1f5f9;position:sticky;top:0}
+  table.dataframe tbody th{background:#f8fafc;text-align:left}
+  .boyut{font-size:11.5px;color:var(--muted);padding:0 10px 8px}
+  .veri-tablo{border-collapse:collapse;width:100%;font-size:.88rem;margin:6px 0}
+  .veri-tablo th,.veri-tablo td{border:1px solid var(--line);padding:5px 8px;text-align:left;vertical-align:top}
+  .veri-tablo th{background:#f3f4f6}
+  code{background:#eef2f7;padding:1px 5px;border-radius:4px;font-size:.88em}
+  /* regex vurgulama */
+  .rx-metin{font-family:Consolas,monospace;font-size:13.5px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:10px 12px;white-space:pre-wrap;line-height:1.9;word-break:break-word}
+  .rx-metin .es{background:#bfdbfe;border-bottom:2px solid #2563eb;border-radius:3px;padding:1px 0}
+  .rx-metin .es:nth-of-type(even){background:#bbf7d0;border-bottom-color:#16a34a}
+  .rx-metin .bos{display:inline-block;width:2px;height:1.1em;background:#dc2626;vertical-align:middle;margin:0 1px}
+  .rx-ozet{font-size:12.5px;color:var(--muted);margin:6px 2px}
+  .rx-tablo{border-collapse:collapse;font-size:12px;font-family:Consolas,monospace;margin-top:4px}
+  .rx-tablo th,.rx-tablo td{border:1px solid var(--line);padding:3px 7px;text-align:left}
+  .rx-tablo th{background:#f1f5f9}
+  .test-arac{display:grid;grid-template-columns:1fr 150px;gap:8px;margin:8px 0}
+  .test-arac input,.test-arac textarea{font-family:Consolas,monospace;font-size:14px;padding:9px 11px;border:2px solid #cfd8dc;border-radius:8px;outline:none;width:100%}
+  .test-arac textarea{grid-column:1/-1;min-height:110px;resize:vertical}
+  .bayraklar{display:flex;gap:12px;flex-wrap:wrap;font-size:.85rem;margin:2px 0 6px}
+  #bulunamadi{display:none;background:#fff;border:1px dashed #cbd5e1;border-radius:12px;padding:28px;text-align:center;color:var(--muted)}
+  footer{text-align:center;color:var(--muted);font-size:.83rem;padding:6px 0 30px}
+  @media (max-width:920px){.yerlesim{grid-template-columns:1fr} nav{display:none}}
+</style>
+</head>
+<body>
+<div id="jsYok" style="background:#fef3c7;border-bottom:2px solid #f59e0b;color:#78350f;padding:12px 20px;font:15px/1.5 system-ui,sans-serif">
+<b>⚠ Çalıştır düğmeleri görünmüyorsa:</b> Bu sayfa JavaScript ile çalışır; uygulamanın dosya önizleme penceresi betikleri çalıştırmaz.
+Dosyayı <b>indirip</b> bilgisayarınızda <b>Chrome, Edge veya Firefox</b> ile açın (çift tıklamak yeterli). İlk açılışta internet bağlantısı gerekir.</div>
+<script>document.getElementById("jsYok").remove()</script>
+<header>
+  <a href="index.html" style="color:#fff;opacity:.85;text-decoration:none;font-size:.88rem;display:inline-block;margin-bottom:6px">← Tüm kopya kâğıtları</a>
+  <h1>Düzenli İfadeler (RegEx) ile İK Metinleri</h1>
+  <p>Dataquest “RegEx Cheat Sheet” kopya kâğıdındaki tüm yapılar İK metinleriyle (iş ilanı, CV, e-posta, telefon, sicil, tarih) yeniden yazıldı. Kodlar tarayıcıda <b>Pyodide</b> ile Python'un <code>re</code> modülüyle çalışır; eşleşmeler renkli gösterilir. Sayfanın başında canlı bir test aracı var.</p>
+  <div class="durum"><span class="nokta" id="durumNokta"></span><span id="durumYazi">Python ortamı yükleniyor…</span></div>
+</header>
+
+<div class="ara-kutu">
+  <div class="ara-ic">
+    <div class="ara-satir">
+      <input id="ara" type="search" placeholder="Ara: rakam, kelime sınırı, ileri bakış, sub, e-posta, Türkçe, bayrak…  ( / tuşu ile odaklan )" autocomplete="off">
+      <span id="sonucSayisi"></span>
+      <button class="btn ikincil" id="veriSifirla" disabled title="Veri setlerini ilk hâline döndürür">↺ Veriyi sıfırla</button>
+      <button class="btn" id="gorunenleriCalistir" disabled>▶ Görünenleri çalıştır</button>
+    </div>
+    <div class="cipler" id="cipler"></div>
+    <div class="oneriler">Örnek aramalar: <a data-q="rakam">rakam</a><a data-q="küme">küme</a><a data-q="sınır">sınır</a><a data-q="grup">grup</a><a data-q="ileri bakış">ileri bakış</a><a data-q="sub">sub</a><a data-q="bayrak">bayrak</a><a data-q="Türkçe">Türkçe</a><a data-q="e-posta">e-posta</a><a data-q="pandas">pandas</a></div>
+  </div>
+</div>
+
+<div class="yerlesim">
+  <nav><h3>Bölümler</h3><div id="icindekiler"></div></nav>
+  <main>
+    <div class="bolum" id="b-veri">
+      <h2>Kullanılan İK metinleri</h2>
+      <p class="bolum-ac">Örneklerde İK metinleri kullanılıyor. Her kartta önce İK örneği çalışır; kopya kâğıdının özgün örneği açıklamanın altında yazar. <code>vurgula(desen, metin)</code> yardımcı fonksiyonu eşleşmeleri renklendirir ve grupları tabloya döker.</p>
+<table class="veri-tablo">
+<tr><th>Nesne</th><th>İçerik</th></tr>
+<tr><td><code>ilan</code></td><td>Kıdemli İK Uzmanı iş ilanı (4 satır): deneyim, sertifika, maaş aralığı, e-posta, tarih, ilan no</td></tr>
+<tr><td><code>cv</code></td><td>Aday özgeçmişinden kesit: ad, e-posta, telefon, deneyim yılları, sertifikalar</td></tr>
+<tr><td><code>eposta_listesi</code>, <code>telefonlar</code>, <code>tarihler</code>, <code>sicil_kayitlari</code></td><td>Farklı biçimlerde yazılmış, bir kısmı hatalı kayıtlar (doğrulama ve temizleme için)</td></tr>
+<tr><td><code>basvurular</code></td><td>5 adaylık pandas DataFrame (str.extract / str.contains örnekleri için)</td></tr>
+</table>
+      <div class="kart"><div class="kart-bas"><span class="komut">Veri kurulumu</span></div>
+        <div class="aciklama">Sayfa açılınca otomatik çalışır. Düzenleyip yeniden çalıştırabilirsiniz.</div>
+        <div id="kurulumHucre"></div>
+      </div>
+    </div>
+    <div id="bolumler"></div>
+    <div id="bulunamadi">Aramanızla eşleşen komut bulunamadı. Daha kısa bir kelime ya da İngilizce karşılığını deneyin.</div>
+    <footer>Kaynak: Dataquest, <i>RegEx Cheat Sheet</i> · Metinler kurgusaldır, öğretim amaçlıdır · Pyodide + re · Desenlerinizi ayrıca regex101.com'da da sınayabilirsiniz</footer>
+  </main>
+</div>
+
+<script type="application/json" id="sayfaVerisi">{"bolumler": [{"id": "ozel", "baslik": "Özel karakterler", "en": "Special characters", "ac": "Çapalar (^ $), joker (.), kaçış (\\), VEYA (|) ve niceleyiciler (+ * ? {m,n}).", "ogeler": [{"k": "^r", "tr": "^ çapası, sağındaki karakter ya da grup yalnızca metnin başındaysa eşleşir; başka yerde geçmesi eşleşme sayılmaz.", "kod": "vurgula(r\"^Kıdemli\", ilan)", "en": "Kopya kâğıdı örneği: ^r → regular expressions (yalnızca baştaki r)"}, {"k": "s$", "tr": "$ çapası, solundaki karakter ya da grup yalnızca metnin sonundaysa eşleşir.", "kod": "vurgula(r\"\\d+$\", ilan)      # metnin sonundaki sayı (ilan numarası)", "en": "Kopya kâğıdı örneği: s$ → she sells seashells"}, {"k": ".", "tr": "Joker karakter: yeni satır (\\n) dışında tek bir karakterle (boşluk dahil) eşleşir.", "kod": "vurgula(r\"S100.\", sicil_kayitlari)", "en": "Kopya kâğıdı örneği: . → her karakter"}, {"k": "\\.", "tr": "Ters eğik çizgi özel karakteri kaçırır: \\. gerçek nokta demektir (\\d gibi karakter sınıfları da \\ ile yazılır).", "kod": "vurgula(r\"\\.com(\\.tr)?\", eposta_listesi)", "en": "Kopya kâğıdı örneği: \\. → www.example.com"}, {"k": "A|B", "tr": "VEYA işleci: solundaki A ya da sağındaki B ile eşleşir.", "kod": "vurgula(r\"SHRM|CIPD|PMP\", ilan + \"\\n\" + cv)", "en": "Kopya kâğıdı örneği: A|B → Action Button"}, {"k": "b+", "tr": "+ niceleyicisi önündeki ifadeyle bir ya da daha çok kez, açgözlü (en uzun) biçimde eşleşir.", "kod": "vurgula(r\"\\d+\", telefonlar)", "en": "Kopya kâğıdı örneği: b+ → abc bbb d b"}, {"k": "b*", "tr": "* niceleyicisi sıfır ya da daha çok kez eşleşir; eşleşme olmayan konumlarda boş eşleşmeler de üretir.", "kod": "vurgula(r\"S10*\", \"S1 S10 S100 S1000 S\")", "en": "Kopya kâğıdı örneği: b* → abc bbb d b"}, {"k": "colou?r", "tr": "? niceleyicisi önündeki karakteri ya da grubu isteğe bağlı yapar (0 ya da 1 kez).", "kod": "vurgula(r\"e-?posta\", \"eposta, e-posta, e--posta, E-posta\")", "en": "Kopya kâğıdı örneği: colou?r → color colour"}, {"k": "u{3}", "tr": "{m} niceleyicisi önündeki karakterle tam m kez eşleşir.", "kod": "vurgula(r\"\\d{4}\", tarihler)      # 4 haneli yıllar", "en": "Kopya kâğıdı örneği: u{3} → uuu uuuu uu u"}, {"k": "u{2,3}", "tr": "{m,n} niceleyicisi en az m, en çok n kez eşleşir (açgözlü).", "kod": "vurgula(r\"\\b\\d{2,3}\\b\", \"0532 123 45 67 / 9 / 1000\")", "en": "Kopya kâğıdı örneği: u{2,3}"}, {"k": "u{2,3}?", "tr": "{m,n}? en az m, en çok n kez ama tembel (mümkün olan en kısa) eşleşir.", "kod": "print(\"açgözlü:\", re.findall(r\"\\d{2,3}\", \"1234567\"))\nprint(\"tembel :\", re.findall(r\"\\d{2,3}?\", \"1234567\"))\nvurgula(r\"\\d{2,3}?\", \"1234567\")", "en": "Kopya kâğıdı örneği: u{2,3}? (non-greedy)"}]}, {"id": "kume", "baslik": "Kümeler", "en": "Sets", "ac": "Köşeli parantez içindeki karakterlerden herhangi biri.", "ogeler": [{"k": "[rEsz]", "tr": "Köşeli parantez bir küme tanımlar; kümedeki herhangi bir karakter eşleşir.", "kod": "vurgula(r\"[SX]\\d{4}\", sicil_kayitlari)", "en": "Kopya kâğıdı örneği: [rEsz] → Regular Expression"}, {"k": "[a-z]", "tr": "Kümede - aralık işlecidir: a'dan z'ye herhangi bir karakter.", "kod": "vurgula(r\"[a-z]+\", \"Bordro uzmanı İK çalışanı\")", "en": "Kopya kâğıdı örneği: [a-z] → 1 Fig, 2 NewTons", "not": "[a-z] Türkçe harfleri (ç, ğ, ı, ö, ş, ü) kapsamaz; Türkçe metinde [a-zçğıöşü] ya da \\w kullanın."}, {"k": "[a\\-z]", "tr": "\\ ile kaçırılan - aralık değil, gerçek tire olur: yalnızca a, z ve - eşleşir.", "kod": "vurgula(r\"[0-9\\-]+\", tarihler)", "en": "Kopya kâğıdı örneği: [a\\-z] → a to z is not = A-Z"}, {"k": "[a-]", "tr": "Kümenin başında ya da sonunda yer alan - gerçek karakter sayılır.", "kod": "vurgula(r\"[0-9-]+\", \"IK-2025-0147\")", "en": "Kopya kâğıdı örneği: [a-] → regular-expression"}, {"k": "[-a]", "tr": "Yukarıdakiyle aynı: a ya da - ile eşleşir.", "kod": "vurgula(r\"[-/.0-9]+\", tarihler)      # tüm tarih biçimleri", "en": "Kopya kâğıdı örneği: [-a] → regular-expression"}, {"k": "[a-z0-9]", "tr": "a'dan z'ye ve 0'dan 9'a kadar karakterler.", "kod": "vurgula(r\"[a-z0-9._]+@[a-z0-9.]+\", eposta_listesi)", "en": "Kopya kâğıdı örneği: [a-z0-9] → 396 ExpressionS"}, {"k": "[(+*)]", "tr": "Özel karakterler kümenin içinde gerçek karaktere dönüşür: (, +, * ve ).", "kod": "vurgula(r\"[()+]\", telefonlar)", "en": "Kopya kâğıdı örneği: [(+*)] → (valid) *expressions+words"}, {"k": "[^ers]", "tr": "Başa konan ^ kümeyi olumsuzlar: e, r, s dışındaki her karakter.", "kod": "vurgula(r\"[^0-9 ]+\", \"Tel: 0532 123 45 67\")", "en": "Kopya kâğıdı örneği: [^ers] → regular expression"}]}, {"id": "sinif", "baslik": "Karakter sınıfları ve özel diziler", "en": "Character classes | Special sequences", "ac": "", "ogeler": [{"k": "\\w", "tr": "Harf, rakam ve alt çizgi ile eşleşir. Python'da Unicode harfler (Türkçe dahil) de \\w sayılır.", "kod": "vurgula(r\"\\w+\", \"Ad Soyad: Elif Demir_2025 (Çalışan)\")", "en": "Kopya kâğıdı örneği: \\w → Ch 4 racter _ Class 3 s"}, {"k": "\\W", "tr": "Kelime karakteri olmayan her şey: semboller, noktalama, boşluk.", "kod": "vurgula(r\"\\W+\", \"elif.demir@mail.com\")", "en": "Kopya kâğıdı örneği: \\W → !@# $%^&*()"}, {"k": "\\d", "tr": "0-9 rakamları.", "kod": "vurgula(r\"\\d\", \"Maaş: 45.000 TL\")", "en": "Kopya kâğıdı örneği: \\d → 1a2b 3 c"}, {"k": "\\D", "tr": "Rakam olmayan her karakter.", "kod": "vurgula(r\"\\D+\", \"(0216) 555-12-34\")", "en": "Kopya kâğıdı örneği: \\D → 1a2b 3 c"}, {"k": "\\s", "tr": "Boşluk karakterleri: \\t, \\n, \\r ve boşluk.", "kod": "kirli = \"Ad    Soyad:\\tElif   Demir\"\nprint(repr(re.sub(r\"\\s+\", \" \", kirli)))     # fazla boşlukları temizleme\nvurgula(r\"\\s+\", kirli)", "en": "Kopya kâğıdı örneği: \\s → character classes"}, {"k": "\\S", "tr": "Boşluk olmayan her karakter.", "kod": "vurgula(r\"\\S+\", \"PMP,  SHRM-CP   CIPD\")", "en": "Kopya kâğıdı örneği: \\S → character classes"}, {"k": "\\b", "tr": "Kelime sınırı: \\w ile \\W arasındaki konum. Karakter değil konum eşleşir.", "kod": "vurgula(r\"\\bİK\\b\", \"İK uzmanı, İKBS modülü, MİKRO ölçek\")", "en": "Kopya kâğıdı örneği: \\b → character classes"}, {"k": "\\B", "tr": "\\b'nin eşleşmediği yerler: kelimenin içi.", "kod": "vurgula(r\"İK\\B\", \"İK uzmanı, İKBS modülü, MİKRO ölçek\")", "en": "Kopya kâğıdı örneği: \\B → character classes"}, {"k": "\\A", "tr": "Metnin en başı. ^'den farkı: çok satırlı modda bile yalnızca metnin başında eşleşir.", "kod": "print(\"(?m)^ :\", re.findall(r\"(?m)^\\w+\", ilan))\nprint(\"\\\\A    :\", re.findall(r\"(?m)\\A\\w+\", ilan))\nvurgula(r\"\\A\\w+\", ilan)", "en": "Kopya kâğıdı örneği: \\Ac → color colour"}, {"k": "\\Z", "tr": "Metnin en sonu. $'dan farkı: çok satırlı modda bile yalnızca metnin sonunda eşleşir.", "kod": "vurgula(r\"\\d+\\Z\", ilan)", "en": "Kopya kâğıdı örneği: r\\Z → color colour"}]}, {"id": "fonksiyon", "baslik": "Python re modülünün sık kullanılan fonksiyonları", "en": "Popular Python re module functions", "ac": "re modülü standart kütüphanededir; kurulum gerekmez: <code>import re<\/code>", "ogeler": [{"k": "re.findall(A, B)", "tr": "B metnindeki A deseninin çakışmayan tüm eşleşmelerini liste olarak döndürür; eşleşme yoksa boş liste.", "kod": "re.findall(r\"[\\w.]+@[\\w-]+\\.[\\w.]+\", eposta_listesi)", "en": "Finds all non-overlapping matches of the pattern A in string B"}, {"k": "re.search(A, B)", "tr": "B'de A'nın ilk geçtiği yeri bulur ve eşleşme nesnesi döndürür; yoksa None.", "kod": "m = re.search(r\"(\\d+) yıl\", cv)\nprint(\"Eşleşme :\", m.group())\nprint(\"Grup 1  :\", m.group(1))\nprint(\"Konum   :\", m.span())", "en": "Searches string B for the first occurrence of the pattern A"}, {"k": "re.split(A, B)", "tr": "B'yi A'nın geçtiği her yerden böler; eşleşme yoksa tek elemanlı liste döner.", "kod": "re.split(r\"\\s*[,;]\\s*\", eposta_listesi)", "en": "Splits string B into a list at each occurrence of the pattern A"}, {"k": "re.sub(A, B, C)", "tr": "C metnindeki tüm A eşleşmelerini B ile değiştirir; özgün metin değişmez.", "kod": "print(re.sub(r\"\\D\", \"\", \"0532 123 45 67\"))                 # yalnızca rakamlar\nprint(re.sub(r\"[\\w.]+@\", \"***@\", eposta_listesi))           # e-postaları maskele", "en": "Replaces all occurrences of the pattern A in string C with B"}, {"k": "re.match(A, B)", "tr": "Deseni yalnızca metnin başından (0. konum) dener; başta eşleşmezse None döner, metnin geri kalanına bakmaz.", "kod": "for sicil in [\"S1001\", \"X1003\", \"S10045\", \" S1007\"]:\n    print(f\"{sicil!r:10}\", \"geçerli\" if re.match(r\"S\\d{4}$\", sicil) else \"geçersiz\")", "en": "Attempts to match the pattern A starting strictly at position 0 in string B"}, {"k": "re.fullmatch(A, B)", "tr": "Desenin metnin tamamıyla eşleşip eşleşmediğine bakar; doğrulama (validation) için en güvenli fonksiyon.", "kod": "desen = r\"[\\w.]+@[\\w-]+(\\.[\\w-]+)+\"\nfor e in re.split(r\"\\s*[,;]\\s*\", eposta_listesi):\n    print(f\"{e:25}\", \"✔\" if re.fullmatch(desen, e) else \"✘\")", "en": "Kopya kâğıdında yok; doğrulama için eklendi"}, {"k": "re.compile(A)", "tr": "Deseni bir kez derleyip tekrar tekrar kullanır; finditer ile tüm eşleşme nesnelerini gezer.", "kod": "tel = re.compile(r\"(?:\\+90\\s?)?\\(?0?(\\d{3})\\)?[\\s-]?(\\d{3})[\\s-]?(\\d{2})[\\s-]?(\\d{2})\")\nfor m in tel.finditer(telefonlar):\n    print(m.group().ljust(18), \"→\", \"0({}) {} {} {}\".format(*m.groups()))", "en": "Kopya kâğıdında yok; sık kullanıldığı için eklendi"}]}, {"id": "grup", "baslik": "Gruplar ve bakışlar", "en": "Groups", "ac": "Yakalama, yakalamayan gruplar, ileri/geri bakış (lookahead/lookbehind) ve geri başvurular.", "ogeler": [{"k": "(ro)", "tr": "Parantez bir yakalama grubu oluşturur; grup daha sonra ayrıca kullanılabilir.", "kod": "vurgula(r\"(\\d+) yıl\", cv)", "en": "Kopya kâğıdı örneği: (ro) → groups"}, {"k": "(?:cat)", "tr": "Yakalamayan grup: mantıksal gruplama yapar ama ayrı bir grup üretmez.", "kod": "print(\"yakalayan  :\", re.findall(r\"(SHRM|CIPD|PMP)-?\\w*\", cv))\nprint(\"yakalamayan:\", re.findall(r\"(?:SHRM|CIPD|PMP)-?\\w*\", cv))", "en": "Kopya kâğıdı örneği: (?:cat) → cat fish dog"}, {"k": "cat(?=fish)", "tr": "Olumlu ileri bakış: ardından fish gelen cat eşleşir; fish eşleşmeye dahil edilmez.", "kod": "vurgula(r\"\\d+(?= yıl)\", cv)       # yalnızca yıl sayıları", "en": "Kopya kâğıdı örneği: cat(?=fish) → catfish catdog"}, {"k": "(?<=cat)fish", "tr": "Olumlu geri bakış: önünde cat olan fish eşleşir.", "kod": "vurgula(r\"(?<=Tel: )[\\d ]+\\d\", cv)", "en": "Kopya kâğıdı örneği: (?<=cat)fish → catfish dogfish"}, {"k": "cat(?!fish)", "tr": "Olumsuz ileri bakış: ardından fish gelmeyen cat eşleşir.", "kod": "vurgula(r\"S\\d{4}(?!\\d)\", sicil_kayitlari)     # 5 haneli S10045'i dışarıda bırakır", "en": "Kopya kâğıdı örneği: cat(?!fish) → catfish catdog"}, {"k": "(?<!cat)fish", "tr": "Olumsuz geri bakış: önünde cat olmayan fish eşleşir.", "kod": "vurgula(r\"(?<!bordro )uzmanı\", cv)", "en": "Kopya kâğıdı örneği: (?<!cat)fish → catfish dogfish"}, {"k": "(cat)\\1", "tr": "Geri başvuru: \\1 ilk yakalanan grubu yeniden ifade eder (\\2, \\3…).", "kod": "metin = \"Başvuru formu formu eksik eksik doldurulmuş.\"\nprint(re.sub(r\"\\b(\\w+) \\1\\b\", r\"\\1\", metin))      # yinelenen kelimeleri düzelt\nvurgula(r\"\\b(\\w+) \\1\\b\", metin)", "en": "Kopya kâğıdı örneği: (cat)\\1 → catcat dogcat"}, {"k": "(?P<pet>cat)", "tr": "Adlandırılmış grup: yakalanan gruba ad verir (P, Python'a özgü sözdizimidir).", "kod": "m = re.search(r\"(?P<gun>\\d{2})\\.(?P<ay>\\d{2})\\.(?P<yil>\\d{4})\", tarihler)\nprint(m.groupdict())\nvurgula(r\"(?P<gun>\\d{2})\\.(?P<ay>\\d{2})\\.(?P<yil>\\d{4})\", tarihler)", "en": "Kopya kâğıdı örneği: (?P<pet>cat) → dog cat fish"}, {"k": "(?P=pet)", "tr": "Adlandırılmış geri başvuru: daha önce o adla yakalanan içerikle eşleşir.", "kod": "vurgula(r\"\\b(?P<kelime>\\w+) (?P=kelime)\\b\", \"İK İK birimi ve bordro bordro süreci\")", "en": "Kopya kâğıdı örneği: (?P=pet) → dog cat fish"}, {"k": "(?#...)", "tr": "Yorum: desen içindeki açıklamalar motor tarafından yok sayılır.", "kod": "vurgula(r\"\\d{4}(?#yıl)-\\d{2}(?#ay)-\\d{2}(?#gün)\", tarihler)", "en": "Kopya kâğıdı örneği: (?#...)"}]}, {"id": "bayrak", "baslik": "Satır içi bayraklar", "en": "Inline flags", "ac": "Desenin başına yazılan (?…) ifadeleri; re.I, re.M gibi parametrelerin satır içi karşılığı.", "ogeler": [{"k": "(?aiLmsux)", "tr": "Satır içi bayrak: ardından gelen desenin davranışını değiştirir. Yalnızca bir gruba uygulamak için (?bayrak:desen).", "kod": "vurgula(r\"(?i:shrm)-CP\", \"SHRM-CP shrm-CP Shrm-cp\")      # yalnızca shrm büyük/küçük duyarsız", "en": "The inline flag setting construct (?flags)"}, {"k": "(?a)", "tr": "Yalnızca ASCII: \\w, \\W, \\b, \\B yalnızca ASCII karakterlerle eşleşir, Unicode'u dışlar.", "kod": "print(\"varsayılan:\", re.findall(r\"\\w+\", \"çalışan 123_ ÇALIŞAN\"))\nprint(\"(?a)      :\", re.findall(r\"(?a)\\w+\", \"çalışan 123_ ÇALIŞAN\"))", "en": "Kopya kâğıdı örneği: (?a)\\w+ → cat 123_ CAT", "not": "Türkçe metinlerde (?a) kelimeleri bölüştürür; Türkçe veri temizlerken kullanmayın."}, {"k": "(?i)", "tr": "Büyük/küçük harf duyarsız eşleşme.", "kod": "vurgula(r\"(?i)bordro\", \"Bordro BORDRO bordro BoRdRo\")", "en": "Kopya kâğıdı örneği: (?i)cat → cat Cat CAT CaT", "not": "Python'da (?i) ile İ, I, i ve ı birbirine eşlenir: (?i)ik deseni 'ık' ile de eşleşir."}, {"k": "(?L)", "tr": "Yerel ayara (locale) bağlı \\w. Python 3'te yalnızca bytes desenlerinde kullanılabilir.", "kod": "print(re.findall(rb\"(?L)\\w+\", \"bordro 2025\".encode()))\ntry:\n    re.compile(r\"(?L)\\w+\")           # str desende hata verir\nexcept re.error as e:\n    print(\"str desende hata:\", e)", "en": "Kopya kâğıdı örneği: (?L)\\w+ → straße cafe Éclair", "not": "Python 3'te (?L) str desenleriyle kullanılamaz; Unicode metin için gerekmez."}, {"k": "(?m)", "tr": "Çok satırlı mod: ^ ve $ her satırın başı ve sonunda eşleşir.", "kod": "vurgula(r\"(?m)^\\w+\", ilan)        # her satırın ilk kelimesi", "en": "Kopya kâğıdı örneği: (?m)^cat → catdog / catfish"}, {"k": "(?s)", "tr": "Nokta her şeyle eşleşir: . yeni satır karakteriyle de eşleşir.", "kod": "print(\"(?s) yok:\", re.findall(r\"Deneyim.*Sertifikalar\", cv))\nvurgula(r\"(?s)Deneyim.*Sertifikalar\", cv)", "en": "Kopya kâğıdı örneği: (?s)cat.dog → cat\\ndog"}, {"k": "(?u)", "tr": "Unicode: \\w, \\W, \\b, \\B Unicode kurallarıyla eşleşir (Python 3 str desenlerinde zaten varsayılan).", "kod": "vurgula(r\"(?u)\\w+\", \"naïve Çalışan café Şahin\")", "en": "Kopya kâğıdı örneği: (?u)\\w+ → naïve cat café"}, {"k": "(?x)", "tr": "Ayrıntılı (verbose) mod: desende boşluk ve yorumlara izin verir; okunabilirliği artırır.", "kod": "desen = r\"\"\"(?x)\n    (?P<gun>\\d{2})  [./-]   # gün\n    (?P<ay>\\d{2})   [./-]   # ay\n    (?P<yil>\\d{4})          # yıl\n\"\"\"\nvurgula(desen, \"Giriş 15.03.2021, çıkış 30/06/2025\")", "en": "Kopya kâğıdı örneği: (?x)c a t → cat"}]}, {"id": "ik", "baslik": "İK uygulamaları", "en": "Kopya kâğıdında yok: İK verisinde gerçek kullanım örnekleri", "ac": "Başvuru, CV ve İKBS verisini temizlemek için hazır kalıplar.", "ogeler": [{"k": "Türkçe kelime kümesi [a-zçğıöşü]", "tr": "Türkçe harfleri kapsayan küme; büyük harfler için A-ZÇĞİÖŞÜ.", "kod": "vurgula(r\"[A-ZÇĞİÖŞÜa-zçğıöşü]+\", \"İşçi çalışanı Ömer Şahin, ücret: 45.000\")", "en": ""}, {"k": "Telefon numaralarını tek biçime getirme", "tr": "Farklı yazılmış telefonları re.sub ile 0(5xx) xxx xx xx biçimine çevirir.", "kod": "def tel_duzelt(m):\n    rakam = re.sub(r\"\\D\", \"\", m.group())[-10:]\n    return f\"0({rakam[:3]}) {rakam[3:6]} {rakam[6:8]} {rakam[8:]}\"\nre.sub(r\"(?:\\+90\\s?)?\\(?0?\\d{3}\\)?[\\s-]?\\d{3}[\\s-]?\\d{2}[\\s-]?\\d{2}\", tel_duzelt, telefonlar)", "en": ""}, {"k": "Tarihleri ISO biçimine dönüştürme", "tr": "gg.aa.yyyy ve yyyy/aa/gg biçimlerini grup başvurularıyla yyyy-aa-gg yapar.", "kod": "iso = re.sub(r\"(\\d{2})\\.(\\d{2})\\.(\\d{4})\", r\"\\3-\\2-\\1\", tarihler)\niso = re.sub(r\"(\\d{4})/(\\d{2})/(\\d{2})\", r\"\\1-\\2-\\3\", iso)\niso", "en": ""}, {"k": "Maaş aralığını sayıya çevirme", "tr": "Binlik ayraçlı tutarları bağlamıyla (Maaş aralığı … TL) yakalayıp sayıya dönüştürür.", "kod": "m = re.search(r\"Maaş aralığı: (\\d{1,3}(?:\\.\\d{3})*) - (\\d{1,3}(?:\\.\\d{3})*) TL\", ilan)\nalt, ust = (int(g.replace(\".\", \"\")) for g in m.groups())\nprint(\"Alt:\", alt, \"| Üst:\", ust, \"| Orta nokta:\", (alt + ust) / 2)\n# Dikkat: yalnızca \\d{1,3}(?:\\.\\d{3})+ deseni tarihteki \"12.202\" parçasını da tutar sanar\nprint(re.findall(r\"\\d{1,3}(?:\\.\\d{3})+\", ilan))", "en": ""}, {"k": "KVKK için maskeleme", "tr": "E-posta ve telefon numaralarını kısmen gizler.", "kod": "maskeli = re.sub(r\"([\\w.])[\\w.]*@\", r\"\\1***@\", cv)\nmaskeli = re.sub(r\"(\\d{4}) \\d{3} (\\d{2}) \\d{2}\", r\"\\1 *** \\2 **\", maskeli)\nprint(maskeli)", "en": ""}, {"k": "pandas: str.extract ile deneyim yılı", "tr": "Başvuru özetlerinden deneyim yılını ayrı bir sütuna çıkarır.", "kod": "basvurular[\"deneyim_yil\"] = basvurular[\"ozet\"].str.extract(r\"(\\d+) yıl\", expand=False).astype(float)\nbasvurular", "en": ""}, {"k": "pandas: str.contains ile sertifika filtresi", "tr": "Belirli sertifikalara sahip adayları süzer.", "kod": "basvurular[basvurular[\"ozet\"].str.contains(r\"\\b(?:SHRM|CIPD|PMP)\\b\", regex=True)]", "en": ""}, {"k": "pandas: str.findall ile iletişim bilgisi", "tr": "Her özetten e-posta ve telefonları liste olarak çıkarır.", "kod": "basvurular[\"iletisim\"] = basvurular[\"ozet\"].str.findall(r\"[\\w.]+@[\\w.]+|0\\d{3} \\d{3} \\d{2} \\d{2}\")\nbasvurular[[\"aday\", \"iletisim\"]]", "en": ""}]}], "esanlam": {"basi": "^ \\a start", "bas": "^ \\a", "sonu": "$ \\z end", "son": "$ \\z", "nokta": ". \\.", "veya": "|", "tekrar": "+ * { niceleyici", "niceleyici": "+ * ? {", "istege": "?", "kume": "[", "aralik": "[a-z] -", "rakam": "\\d", "sayi": "\\d", "harf": "\\w [a-z]", "kelime": "\\w \\b", "bosluk": "\\s", "sinir": "\\b \\B", "bul": "findall search", "ara": "search findall", "bol": "split", "degistir": "sub", "eslestir": "match fullmatch", "dogrula": "fullmatch match", "grup": "( (?:", "adli": "(?P", "ileri": "(?= (?!", "geri": "(?<= (?<! \\1", "bakis": "(?= (?! (?<= (?<!", "bayrak": "(?i) (?m) (?s) (?x) (?a)", "buyuk": "(?i)", "kucuk": "(?i)", "satir": "(?m) ^ $", "yorum": "(?# (?x)", "turkce": "çğıöşü (?a) (?u)", "eposta": "@", "e-posta": "@", "telefon": "tel 0532", "tarih": "tarih \\d{4}", "maske": "maske ***", "kvkk": "maske", "pandas": "str.extract str.contains str.findall", "tembel": "{2,3}? .*?", "acgozlu": "+ * {2,3}"}, "kurulum": "import re\nimport pandas as pd\n\nilan = \"\"\"Kıdemli İK Uzmanı (Bordro) - İstanbul\nEn az 5 yıl deneyimli, SHRM veya CIPD sertifikalı adaylar tercih sebebidir.\nMaaş aralığı: 45.000 - 60.000 TL. Başvuru: kariyer@ornekfirma.com.tr\nSon başvuru tarihi: 15.12.2025 | İlan no: IK-2025-0147\"\"\"\n\ncv = \"\"\"Ad Soyad: Elif Demir\nE-posta: elif.demir@mail.com  Tel: 0532 123 45 67\nDeneyim: 7 yıl (2018-2025) İK uzmanı; 2 yıl bordro uzmanı\nSertifikalar: PMP, SHRM-CP\"\"\"\n\neposta_listesi = \"ayse.k@firma.com, mehmet_t@firma.com.tr; elif.s@ornek.org, yanlis@, zeynep@firma\"\ntelefonlar = \"0532 123 45 67, (0216) 555-12-34, +90 505 987 6543, 05321234567\"\nsicil_kayitlari = \"S1001 S1002 X1003 S10045 s1006 S1007\"\ntarihler = \"Giriş: 2021-03-15, Terfi: 01.09.2023, Çıkış: 2025/06/30\"\n\nbasvurular = pd.DataFrame({\n    \"aday\": [\"Ayşe K.\", \"Mehmet T.\", \"Elif S.\", \"Can Y.\", \"Zeynep A.\"],\n    \"ozet\": [\"3 yıl işe alım deneyimi, SHRM sertifikalı\",\n             \"Bordro ve özlük işlerinde 8 yıl; tel 0533 222 11 00\",\n             \"Yeni mezun, staj: 6 ay. e-posta: elif.s@ornek.org\",\n             \"12 yıl İK yöneticisi, CIPD Level 7\",\n             \"İK analitiği, Python; 4 yıl deneyim, PMP\"],\n})\n\nprint(\"Hazır metinler: ilan, cv, eposta_listesi, telefonlar, sicil_kayitlari, tarihler | basvurular:\", basvurular.shape)\nvurgula(r\"\\d+ yıl\", cv)", "paketler": ["pandas"], "micropip": [], "motor": "\nimport sys, io, ast, traceback, json, warnings, base64, re as _re\nimport js\nwarnings.filterwarnings(\"ignore\")\ntry:\n    import pandas as pd\n    pd.set_option(\"display.width\", 140)\nexcept ImportError:\n    pd = None\n\n_ONCESI = ''\n_bekleyen = []\n\ndef indir(dosya):\n    js.indirDosya(dosya)\n    print(\"İndiriliyor:\", dosya)\n\ndef pano_kopyala(tablo):\n    metin = tablo.to_csv(sep=\"\\t\", index=False) if hasattr(tablo, \"to_csv\") else str(tablo)\n    js.panoyaYaz(metin)\n    print(\"Panoya kopyalandı.\")\n\nclass HTMLCikti:\n    def __init__(self, h): self.h = h\n    def _repr_html_(self): return self.h\n    def __repr__(self): return \"<HTML çıktı>\"\n\ndef _fig_topla():\n    plt = sys.modules.get(\"matplotlib.pyplot\")\n    if plt is None:\n        return\n    for n in plt.get_fignums():\n        f = plt.figure(n)\n        b = io.BytesIO()\n        f.savefig(b, format=\"png\", dpi=90, bbox_inches=\"tight\")\n        _bekleyen.append(base64.b64encode(b.getvalue()).decode())\n    plt.close(\"all\")\n\ndef _goster(*a, **k):\n    _fig_topla()\n\ndef _matplotlib_hazirla():\n    if \"matplotlib\" in sys.modules or False:\n        import matplotlib\n        matplotlib.use(\"agg\")\n        import matplotlib.pyplot as plt\n        plt.show = _goster\n\n_matplotlib_hazirla()\n\n# ---------- regex görselleştirme ----------\ndef vurgula(desen, metin, bayrak=0):\n    \"\"\"Desenin metindeki tüm eşleşmelerini renkli işaretler, grupları tabloya döker.\"\"\"\n    import html as _h\n    rx = _re.compile(desen, bayrak) if isinstance(desen, str) else desen\n    parcalar, son, eslesmeler = [], 0, list(rx.finditer(metin))\n    for m in eslesmeler:\n        parcalar.append(_h.escape(metin[son:m.start()]))\n        if m.start() == m.end():\n            parcalar.append('<span class=\"bos\" title=\"boş eşleşme\"><\/span>')\n        else:\n            parcalar.append('<span class=\"es\" title=\"%d-%d\">%s<\/span>' % (m.start(), m.end(), _h.escape(m.group())))\n        son = m.end()\n    parcalar.append(_h.escape(metin[son:]))\n    bos = sum(1 for m in eslesmeler if m.start() == m.end())\n    ozet = \"%d eşleşme\" % len(eslesmeler) + (\" (%d boş eşleşme kırmızı çizgiyle)\" % bos if bos else \"\")\n    tablo = \"\"\n    gruplu = [m for m in eslesmeler if m.groups() or m.groupdict()]\n    if eslesmeler and (gruplu or len(eslesmeler) <= 12):\n        adlar = {v: k for k, v in rx.groupindex.items()}\n        bas = \"\".join(\"<th>%s<\/th>\" % (\"grup %d\" % i + (\" (%s)\" % adlar[i] if i in adlar else \"\")) for i in range(1, rx.groups + 1))\n        satirlar = \"\".join(\n            \"<tr><td>%d<\/td><td>%d–%d<\/td><td>%s<\/td>%s<\/tr>\" % (\n                j + 1, m.start(), m.end(), _h.escape(repr(m.group())),\n                \"\".join(\"<td>%s<\/td>\" % _h.escape(repr(g)) for g in m.groups()))\n            for j, m in enumerate(eslesmeler[:30]))\n        tablo = '<table class=\"rx-tablo\"><tr><th>#<\/th><th>konum<\/th><th>eşleşme<\/th>%s<\/tr>%s<\/table>' % (bas, satirlar)\n    return HTMLCikti('<div class=\"rx-ozet\">Desen: <code>%s<\/code> · %s<\/div><div class=\"rx-metin\">%s<\/div>%s' % (\n        _h.escape(rx.pattern), ozet, \"\".join(parcalar), tablo))\n\ndef _regex_test(desen, metin, bayraklar):\n    try:\n        b = 0\n        for c in bayraklar:\n            b |= {\"i\": _re.I, \"m\": _re.M, \"s\": _re.S, \"x\": _re.X, \"a\": _re.A}[c]\n        return vurgula(desen, metin, b).h\n    except _re.error as e:\n        return '<pre class=\"hata\">Desen hatası: %s<\/pre>' % e\n\ndef _yeni_ns():\n    return {\"indir\": indir, \"pano_kopyala\": pano_kopyala, \"vurgula\": vurgula, \"HTMLCikti\": HTMLCikti}\n\ndef _tablo_html(sonuc):\n    if isinstance(sonuc, pd.Series):\n        sonuc = sonuc.to_frame()\n    return sonuc.to_html(max_rows=20, max_cols=14, border=0, na_rep=\"NaN\"), \"%d satır × %d sütun\" % sonuc.shape\n\ndef _grafik_nesnesi(x):\n    if isinstance(x, (list, tuple)):\n        return len(x) > 0 and all(_grafik_nesnesi(e) for e in x)\n    mod = type(x).__module__ or \"\"\n    return mod.startswith((\"matplotlib\", \"seaborn\")) or (hasattr(x, \"shape\") and mod.startswith(\"numpy\") and x.dtype == object)\n\ndef _calistir(kod, g):\n    tampon = io.StringIO()\n    eski = sys.stdout, sys.stderr\n    sys.stdout = sys.stderr = tampon\n    html = boyut = hata = None\n    del _bekleyen[:]\n    try:\n        if _ONCESI:\n            exec(_ONCESI, g)\n        _matplotlib_hazirla()\n        agac = ast.parse(kod)\n        son = None\n        if agac.body and isinstance(agac.body[-1], ast.Expr):\n            son = ast.Expression(agac.body.pop().value)\n        exec(compile(agac, \"<hücre>\", \"exec\"), g)\n        if son is not None:\n            sonuc = eval(compile(son, \"<hücre>\", \"eval\"), g)\n            if pd is not None and isinstance(sonuc, (pd.DataFrame, pd.Series)):\n                html, boyut = _tablo_html(sonuc)\n            elif hasattr(sonuc, \"_repr_html_\") and not hasattr(sonuc, \"figure\") and not hasattr(sonuc, \"fig\"):\n                html = sonuc._repr_html_()\n            elif sonuc is not None and not _grafik_nesnesi(sonuc):\n                print(repr(sonuc))\n    except Exception:\n        hata = traceback.format_exc(limit=-2)\n    finally:\n        sys.stdout, sys.stderr = eski\n    try:\n        _fig_topla()\n    except Exception:\n        pass\n    return json.dumps({\"cikti\": tampon.getvalue(), \"html\": html, \"boyut\": boyut,\n                       \"gorseller\": list(_bekleyen), \"hata\": hata})\n"}</script>
+
+<script>
+const SAYFA = JSON.parse(document.getElementById("sayfaVerisi").textContent);
+const BOLUMLER = SAYFA.bolumler;
+const ESANLAM = SAYFA.esanlam;
+let pyodide = null, hazir = false, ns = null;
+const kartlar = [];
+let aktifBolum = "hepsi";
+
+const durum = (y, c) => { document.getElementById("durumYazi").textContent = y;
+  document.getElementById("durumNokta").className = "nokta" + (c ? " " + c : ""); };
+const kac = t => String(t).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]));
+const sade = t => t.toLocaleLowerCase("tr").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/ı/g, "i");
+const norm = t => sade(t).replace(/\s+/g, " ");
+
+function kartOlustur(o, bolum) {
+  const el = document.createElement("div");
+  el.className = "kart";
+  el.innerHTML = `<div class="kart-bas"><span class="komut"></span></div>
+    <div class="aciklama"></div>${o.en ? `<div class="ingilizce">${kac(o.en)}</div>` : ""}
+    ${o.not ? `<div class="uyari">⚠ ${kac(o.not)}</div>` : ""}<div class="hucre-yer"></div>`;
+  el.querySelector(".komut").textContent = o.k;
+  el.querySelector(".aciklama").textContent = o.tr;
+  const hucre = hucreOlustur(el.querySelector(".hucre-yer"), o.kod);
+  const metin = norm([o.k, o.tr, o.en || "", o.not || "", o.kod, bolum.baslik, bolum.en || ""].join(" "));
+  kartlar.push({el, bolum: bolum.id, metin, hucre, o});
+  return el;
+}
+
+function hucreOlustur(yer, kod) {
+  yer.innerHTML = `<div class="hucre"><div class="hucre-ust"><span>Python</span>
+    <div class="btns"><button class="kopyala" title="Kodu kopyala">⧉</button><button class="sifirla" title="Özgün koda dön">↺</button>
+    <button class="calistir" ${hazir ? "" : "disabled"}>▶ Çalıştır</button></div></div>
+    <textarea class="kod" spellcheck="false"></textarea></div><div class="cikti"></div>`;
+  const ta = yer.querySelector("textarea"), cikti = yer.querySelector(".cikti");
+  ta.value = kod;
+  const boyutla = () => { ta.style.height = "auto"; ta.style.height = (ta.scrollHeight + 4) + "px"; };
+  ta.addEventListener("input", boyutla); requestAnimationFrame(boyutla);
+  ta.addEventListener("keydown", e => {
+    if (e.key === "Tab") { e.preventDefault(); const p = ta.selectionStart;
+      ta.value = ta.value.slice(0, p) + "    " + ta.value.slice(ta.selectionEnd); ta.selectionStart = ta.selectionEnd = p + 4; }
+    if ((e.ctrlKey || e.shiftKey) && e.key === "Enter") { e.preventDefault(); h.calistir(); }
+  });
+  const h = { ta, cikti, btn: yer.querySelector(".calistir"), calistir: () => calistir(h) };
+  h.btn.onclick = h.calistir;
+  yer.querySelector(".sifirla").onclick = () => { ta.value = kod; boyutla(); cikti.innerHTML = ""; };
+  yer.querySelector(".kopyala").onclick = () => navigator.clipboard?.writeText(ta.value);
+  return h;
+}
+
+const kapsayici = document.getElementById("bolumler");
+const toc = document.getElementById("icindekiler");
+const cipler = document.getElementById("cipler");
+cipler.innerHTML = `<span class="cip aktif" data-b="hepsi">Tümü<span class="say"></span></span>`;
+BOLUMLER.forEach((b, i) => {
+  const sec = document.createElement("div");
+  sec.className = "bolum"; sec.id = "b-" + b.id;
+  sec.innerHTML = `<h2>${i + 1}. ${kac(b.baslik)} ${b.en ? `<span style="font-weight:400;color:#9ca3af;font-size:.85rem">· ${kac(b.en)}</span>` : ""}</h2>
+    ${b.ac ? `<div class="bolum-ac">${b.ac}</div>` : ""}`;
+  b.ogeler.forEach(o => sec.appendChild(kartOlustur(o, b)));
+  kapsayici.appendChild(sec);
+  toc.insertAdjacentHTML("beforeend", `<a href="#b-${b.id}" data-b="${b.id}"><span>${i + 1}. ${kac(b.baslik)}</span><span class="say"></span></a>`);
+  cipler.insertAdjacentHTML("beforeend", `<span class="cip" data-b="${b.id}">${kac(b.baslik)}<span class="say"></span></span>`);
+});
+const kurulumHucre = hucreOlustur(document.getElementById("kurulumHucre"), SAYFA.kurulum);
+
+function vurgula(metin, terimler) {
+  if (!terimler.length) return kac(metin);
+  const n = sade(metin);
+  if (n.length !== metin.length) return kac(metin);
+  const isaret = new Array(metin.length).fill(false);
+  terimler.forEach(t => { let i = n.indexOf(t); while (t && i > -1) { for (let j = i; j < i + t.length; j++) isaret[j] = true; i = n.indexOf(t, i + 1); } });
+  let s = "", acik = false;
+  for (let i = 0; i < metin.length; i++) {
+    if (isaret[i] && !acik) { s += "<mark>"; acik = true; }
+    if (!isaret[i] && acik) { s += "</mark>"; acik = false; }
+    s += kac(metin[i]);
+  }
+  return s + (acik ? "</mark>" : "");
+}
+
+function eslesir(k, t) {
+  if (k.metin.includes(t)) return true;
+  const ek = Object.entries(ESANLAM).find(([a]) => a.startsWith(t) || (t.length > 3 && t.startsWith(a)));
+  return ek ? ek[1].split(" ").some(e => e && k.metin.includes(norm(e))) : false;
+}
+
+function ara() {
+  const q = norm(document.getElementById("ara").value).trim();
+  const terimler = q ? q.split(" ").filter(Boolean) : [];
+  let gorunen = 0; const sayac = {};
+  kartlar.forEach(k => {
+    const ok = terimler.every(t => eslesir(k, t));
+    const goster = ok && (aktifBolum === "hepsi" || k.bolum === aktifBolum);
+    k.el.style.display = goster ? "" : "none";
+    if (ok) sayac[k.bolum] = (sayac[k.bolum] || 0) + 1;
+    if (goster) gorunen++;
+    k.el.querySelector(".komut").innerHTML = vurgula(k.o.k, terimler);
+    k.el.querySelector(".aciklama").innerHTML = vurgula(k.o.tr, terimler);
+  });
+  BOLUMLER.forEach(b => {
+    const say = sayac[b.id] || 0;
+    document.getElementById("b-" + b.id).style.display = (say > 0 && (aktifBolum === "hepsi" || aktifBolum === b.id)) ? "" : "none";
+    const a = toc.querySelector(`[data-b="${b.id}"]`);
+    a.querySelector(".say").textContent = say; a.classList.toggle("bos", !say);
+    cipler.querySelector(`[data-b="${b.id}"] .say`).textContent = say;
+  });
+  cipler.querySelector(`[data-b="hepsi"] .say`).textContent = Object.values(sayac).reduce((a, b) => a + b, 0);
+  const filtreli = terimler.length || aktifBolum !== "hepsi";
+  document.getElementById("b-veri").style.display = filtreli ? "none" : "";
+  document.getElementById("bulunamadi").style.display = gorunen ? "none" : "block";
+  document.getElementById("sonucSayisi").textContent = filtreli ? `${gorunen} komut gösteriliyor` : `${kartlar.length} komut`;
+}
+document.getElementById("ara").addEventListener("input", ara);
+document.addEventListener("keydown", e => {
+  const tag = document.activeElement.tagName;
+  if (e.key === "/" && tag !== "TEXTAREA" && tag !== "INPUT") { e.preventDefault(); document.getElementById("ara").focus(); }
+  if (e.key === "Escape" && document.activeElement.id === "ara") { e.target.value = ""; ara(); }
+});
+cipler.addEventListener("click", e => {
+  const c = e.target.closest(".cip"); if (!c) return;
+  aktifBolum = c.dataset.b;
+  cipler.querySelectorAll(".cip").forEach(x => x.classList.toggle("aktif", x === c));
+  ara(); window.scrollTo({top: document.querySelector(".yerlesim").offsetTop - 130, behavior: "smooth"});
+});
+document.querySelectorAll(".oneriler a").forEach(a => a.onclick = () => { document.getElementById("ara").value = a.dataset.q; ara(); });
+ara();
+
+window.indirDosya = ad => {
+  const veri = pyodide.FS.readFile(ad);
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([veri])); a.download = ad.split("/").pop(); a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+};
+window.panoyaYaz = metin => navigator.clipboard?.writeText(metin).catch(() => {});
+
+function ciktiYaz(h, r) {
+  h.cikti.innerHTML = "";
+  if (r.cikti) { const p = document.createElement("pre"); p.textContent = r.cikti; h.cikti.appendChild(p); }
+  if (r.html) h.cikti.insertAdjacentHTML("beforeend", `<div class="html-sar">${r.html}</div>${r.boyut ? `<div class="boyut">${r.boyut}</div>` : ""}`);
+  (r.gorseller || []).forEach((g, i) => h.cikti.insertAdjacentHTML("beforeend",
+    `<div class="img-sar"><a download="grafik_${i + 1}.png" href="data:image/png;base64,${g}">⬇ PNG</a><img alt="grafik" src="data:image/png;base64,${g}"></div>`));
+  if (r.hata) { const p = document.createElement("pre"); p.className = "hata"; p.textContent = r.hata; h.cikti.appendChild(p); }
+}
+
+function calistir(h) {
+  if (!hazir) return;
+  h.btn.disabled = true; h.btn.textContent = "⏳";
+  try { ciktiYaz(h, JSON.parse(pyodide.globals.get("_calistir")(h.ta.value, ns))); }
+  catch (e) { h.cikti.innerHTML = `<pre class="hata">${kac(String(e))}</pre>`; }
+  h.btn.disabled = false; h.btn.textContent = "▶ Çalıştır";
+}
+const bekle = () => new Promise(r => setTimeout(r, 15));
+
+async function baslat() {
+  try {
+    durum("Pyodide yükleniyor…");
+    pyodide = await loadPyodide();
+    durum("Paketler yükleniyor: " + SAYFA.paketler.join(", ") + "…");
+    await pyodide.loadPackage(SAYFA.paketler.concat(["micropip"]));
+    const eksikler = [];
+    for (const pk of SAYFA.micropip) {
+      durum(pk + " kuruluyor…");
+      try { await pyodide.runPythonAsync(`import micropip\nawait micropip.install(${JSON.stringify(pk)})`); }
+      catch (e) { eksikler.push(pk); console.warn(pk, e); }
+    }
+    pyodide.runPython(SAYFA.motor);
+    ns = pyodide.globals.get("_yeni_ns")();
+    hazir = true;
+    document.querySelectorAll(".calistir").forEach(b => b.disabled = false);
+    ["veriSifirla", "gorunenleriCalistir"].forEach(id => document.getElementById(id).disabled = false);
+    calistir(kurulumHucre);
+    durum(eksikler.length ? "Hazır (yüklenemeyen: " + eksikler.join(", ") + ")" : "Hazır: veri setleri yüklendi", "hazir");
+    if (window.sayfaHazir) window.sayfaHazir();
+  } catch (e) { durum("Yükleme hatası: " + e.message, "hata"); console.error(e); }
+}
+document.getElementById("veriSifirla").onclick = () => { calistir(kurulumHucre); durum("Veri sıfırlandı", "hazir"); };
+document.getElementById("gorunenleriCalistir").onclick = async () => {
+  for (const k of kartlar) if (k.el.style.display !== "none" && k.el.closest(".bolum").style.display !== "none") { calistir(k.hucre); await bekle(); }
+};
+baslat();
+</script>
+
+<script>
+(function(){
+  const kutu = document.createElement("div");
+  kutu.className = "bolum"; kutu.id = "b-test";
+  kutu.innerHTML = `<h2>Canlı RegEx test aracı</h2>
+  <div class="bolum-ac">Python'un <code>re</code> motoruyla yazdıkça sınayın (regex101.com benzeri). Eşleşmeler renklenir, gruplar tabloda gösterilir.</div>
+  <div class="kart">
+    <div class="test-arac">
+      <input id="rxDesen" value="(?P<yil>\\d+) yıl" spellcheck="false" placeholder="Desen, ör. \\d{4}">
+      <select id="rxOrnek" style="border:2px solid #cfd8dc;border-radius:8px;padding:6px">
+        <option value="">Örnek metin…</option><option value="ilan">İş ilanı</option><option value="cv">CV</option>
+        <option value="eposta">E-postalar</option><option value="tel">Telefonlar</option><option value="tarih">Tarihler</option></select>
+      <textarea id="rxMetin" spellcheck="false"></textarea>
+    </div>
+    <div class="bayraklar">
+      <label><input type="checkbox" value="i"> i (büyük/küçük duyarsız)</label>
+      <label><input type="checkbox" value="m"> m (çok satır)</label>
+      <label><input type="checkbox" value="s"> s (nokta \\n dahil)</label>
+      <label><input type="checkbox" value="x"> x (ayrıntılı)</label>
+      <label><input type="checkbox" value="a"> a (yalnız ASCII)</label>
+    </div>
+    <div id="rxSonuc" class="cikti" style="display:block;border:0;max-height:none"><pre>Python ortamı yüklenince sonuç burada görünecek.</pre></div>
+  </div>`;
+  document.querySelector("main").insertBefore(kutu, document.getElementById("b-veri"));
+  const ORNEK = {
+    ilan: "Kıdemli İK Uzmanı (Bordro) - İstanbul\nEn az 5 yıl deneyimli, SHRM veya CIPD sertifikalı adaylar tercih sebebidir.\nMaaş aralığı: 45.000 - 60.000 TL. Başvuru: kariyer@ornekfirma.com.tr\nSon başvuru tarihi: 15.12.2025 | İlan no: IK-2025-0147",
+    cv: "Ad Soyad: Elif Demir\nE-posta: elif.demir@mail.com  Tel: 0532 123 45 67\nDeneyim: 7 yıl (2018-2025) İK uzmanı; 2 yıl bordro uzmanı\nSertifikalar: PMP, SHRM-CP",
+    eposta: "ayse.k@firma.com, mehmet_t@firma.com.tr; elif.s@ornek.org, yanlis@, zeynep@firma",
+    tel: "0532 123 45 67, (0216) 555-12-34, +90 505 987 6543, 05321234567",
+    tarih: "Giriş: 2021-03-15, Terfi: 01.09.2023, Çıkış: 2025/06/30"
+  };
+  const desen = document.getElementById("rxDesen"), metin = document.getElementById("rxMetin"), sonuc = document.getElementById("rxSonuc");
+  metin.value = ORNEK.cv;
+  document.getElementById("rxOrnek").onchange = e => { if (e.target.value) { metin.value = ORNEK[e.target.value]; test(); } };
+  let zaman = null;
+  function test() {
+    if (typeof pyodide === "undefined" || !pyodide || !hazir) return;
+    const bayrak = [...kutu.querySelectorAll(".bayraklar input:checked")].map(x => x.value).join("");
+    try { sonuc.innerHTML = pyodide.globals.get("_regex_test")(desen.value, metin.value, bayrak); }
+    catch (e) { sonuc.innerHTML = `<pre class="hata">${e}</pre>`; }
+  }
+  const gecikmeli = () => { clearTimeout(zaman); zaman = setTimeout(test, 120); };
+  [desen, metin].forEach(el => el.addEventListener("input", gecikmeli));
+  kutu.querySelectorAll(".bayraklar input").forEach(el => el.addEventListener("change", test));
+  window.sayfaHazir = test;
+})();
+</script>
+<script>
+(function(){const q=new URLSearchParams(location.search).get("q");
+if(q){const a=document.getElementById("ara");a.value=q;a.dispatchEvent(new Event("input"));}})();
+</script>
+</body>
+</html>

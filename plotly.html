@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plotly Express ile İK Veri Görselleştirme — Pyodide Etkileşimli Kopya Kâğıdı</title>
+<script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<style>
+  :root{
+    --bg:#f6f7fb; --card:#ffffff; --ink:#1f2937; --muted:#6b7280;
+    --accent:#0f4c81; --accent2:#e0ecf8; --code:#0b1220; --codeink:#e5e7eb;
+    --ok:#15803d; --err:#b91c1c; --line:#e5e7eb;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);line-height:1.6}
+  header{background:linear-gradient(120deg,#0f4c81,#1e6fb8);color:#fff;padding:32px 24px 26px}
+  header h1{margin:0 0 6px;font-size:1.75rem}
+  header p{margin:0;opacity:.9;max-width:900px}
+  #durum{margin-top:14px;display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.15);padding:6px 12px;border-radius:999px;font-size:.9rem}
+  .nokta{width:10px;height:10px;border-radius:50%;background:#fbbf24;animation:nabiz 1s infinite}
+  .nokta.hazir{background:#4ade80;animation:none}
+  .nokta.hata{background:#f87171;animation:none}
+  @keyframes nabiz{50%{opacity:.35}}
+  .yerlesim{display:grid;grid-template-columns:240px 1fr;gap:24px;max-width:1280px;margin:0 auto;padding:24px}
+  nav{position:sticky;top:16px;align-self:start;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}
+  nav h3{margin:0 0 8px;font-size:.85rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+  nav a{display:block;padding:5px 8px;border-radius:6px;color:var(--ink);text-decoration:none;font-size:.92rem}
+  nav a:hover{background:var(--accent2);color:var(--accent)}
+  main{min-width:0}
+  section{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px 22px;margin-bottom:22px}
+  section h2{margin:0 0 6px;color:var(--accent);font-size:1.3rem}
+  section h3{margin:18px 0 6px;font-size:1.05rem}
+  .not{background:var(--accent2);border-left:4px solid var(--accent);padding:10px 14px;border-radius:6px;font-size:.93rem;margin:10px 0}
+  table.tbl{border-collapse:collapse;width:100%;font-size:.9rem;margin:8px 0}
+  table.tbl th,table.tbl td{border:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}
+  table.tbl th{background:#f3f4f6}
+  code{background:#eef2f7;padding:1px 5px;border-radius:4px;font-size:.88em}
+  .hucre{margin:12px 0 4px;border:1px solid #1f2a44;border-radius:10px;overflow:hidden}
+  .hucre-ust{display:flex;justify-content:space-between;align-items:center;background:#16213a;color:#cbd5e1;padding:6px 10px;font-size:.82rem}
+  .hucre-ust .btns{display:flex;gap:6px}
+  button{border:0;border-radius:6px;padding:5px 12px;font-size:.82rem;cursor:pointer;font-weight:600}
+  .calistir{background:#22c55e;color:#052e14}
+  .calistir:disabled{background:#475569;color:#cbd5e1;cursor:not-allowed}
+  .sifirla{background:#334155;color:#e2e8f0}
+  textarea.kod{display:block;width:100%;min-height:120px;resize:vertical;border:0;outline:none;background:var(--code);color:var(--codeink);
+    font-family:"JetBrains Mono","Fira Code",Consolas,monospace;font-size:13.5px;line-height:1.55;padding:12px 14px;tab-size:4;white-space:pre}
+  .cikti{border:1px solid var(--line);border-top:0;border-radius:0 0 10px 10px;margin-top:-4px;padding:0}
+  .cikti:empty{display:none}
+  .cikti pre{margin:0;padding:10px 14px;font-size:12.5px;background:#f9fafb;white-space:pre-wrap;overflow-x:auto}
+  .cikti pre.hata{color:var(--err);background:#fef2f2}
+  .grafik{width:100%;min-height:380px}
+  .ust-bar{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+  .ust-bar button{background:#fff;color:var(--accent)}
+  footer{text-align:center;color:var(--muted);font-size:.85rem;padding:10px 0 30px}
+  @media (max-width:900px){.yerlesim{grid-template-columns:1fr} nav{position:static}}
+</style>
+</head>
+<body>
+<div id="jsYok" style="background:#fef3c7;border-bottom:2px solid #f59e0b;color:#78350f;padding:12px 20px;font:15px/1.5 system-ui,sans-serif">
+<b>⚠ Çalıştır düğmeleri görünmüyorsa:</b> Bu sayfa JavaScript ile çalışır; uygulamanın dosya önizleme penceresi betikleri çalıştırmaz.
+Dosyayı <b>indirip</b> bilgisayarınızda <b>Chrome, Edge veya Firefox</b> ile açın (çift tıklamak yeterli). İlk açılışta internet bağlantısı gerekir.</div>
+<script>document.getElementById("jsYok").remove()</script>
+<header>
+  <a href="index.html" style="color:#fff;opacity:.85;text-decoration:none;font-size:.88rem;display:inline-block;margin-bottom:6px">← Tüm kopya kâğıtları</a>
+  <h1>Plotly Express ile İK Veri Görselleştirme</h1>
+  <p>DataCamp “Data Visualization with Plotly Express in Python” kopya kâğıdındaki tüm kod kalıpları, insan kaynakları yönetimi verisiyle yeniden yazıldı. Kodlar tarayıcıda <b>Pyodide</b> (WebAssembly Python) ile çalışır; kurulum gerekmez. Her hücreyi düzenleyip yeniden çalıştırabilirsiniz.</p>
+  <div id="durum"><span class="nokta" id="durumNokta"></span><span id="durumYazi">Python ortamı yükleniyor…</span></div>
+  <div class="ust-bar">
+    <button id="hepsiniCalistir" disabled>▶ Tüm hücreleri sırayla çalıştır</button>
+  </div>
+</header>
+
+<div class="yerlesim">
+<nav>
+  <h3>İçindekiler</h3>
+  <a href="#s0">0. İK veri setleri</a>
+  <a href="#s1">1. Plotly nedir?</a>
+  <a href="#s2">2. Etkileşimli kontroller</a>
+  <a href="#s3">3. Kod kalıbı</a>
+  <a href="#s4">4. Saçılım (scatter)</a>
+  <a href="#s5">5. Çizgi (line)</a>
+  <a href="#s6">6. Çubuk (bar)</a>
+  <a href="#s7">7. Histogram</a>
+  <a href="#s8">8. Isı haritası</a>
+  <a href="#s9">9. Özelleştirme kalıbı</a>
+  <a href="#s10">10. İşaretçileri özelleştirme</a>
+  <a href="#s11">11. Çizgileri özelleştirme</a>
+  <a href="#s12">12. Çubukları özelleştirme</a>
+  <a href="#s13">13. Histogramı özelleştirme</a>
+  <a href="#s14">14. Alıştırmalar</a>
+</nav>
+
+<main>
+
+<!-- 0 -->
+<section id="s0">
+  <h2>0. İK veri setlerini oluşturma</h2>
+  <p>Kopya kâğıdındaki <code>clinical_data</code>, <code>stock_data</code>, <code>commodity_data</code>, <code>bill_data</code> ve <code>iris_data</code> yerine dört sentetik İK veri seti kullanıyoruz. <b>Önce bu hücreyi çalıştırın</b>; sonraki hücreler bu tablolara dayanır.</p>
+  <table class="tbl">
+    <tr><th>Kopya kâğıdı</th><th>İK karşılığı</th><th>İçerik</th></tr>
+    <tr><td><code>clinical_data</code></td><td><code>calisanlar</code></td><td>400 çalışan: departman, yaş, kıdem, maaş, performans, bağlılık, eğitim saati, devamsızlık, ayrılma</td></tr>
+    <tr><td><code>stock_data</code></td><td><code>aylik_ik</code></td><td>2022–2025 aylık işe alım, ayrılma ve devir oranı</td></tr>
+    <tr><td><code>commodity_data</code></td><td><code>dept_performans</code></td><td>Departman başına Yüksek / Orta / Düşük performanslı çalışan sayısı</td></tr>
+    <tr><td><code>bill_data</code></td><td><code>calisanlar["maas"]</code></td><td>Aylık brüt maaş dağılımı</td></tr>
+    <tr><td><code>iris_data</code></td><td><code>calisanlar</code> sayısal sütunları</td><td>Korelasyon matrisi</td></tr>
+  </table>
+  <div class="hucre" data-kod="kurulum"></div>
+</section>
+
+<!-- 1 -->
+<section id="s1">
+  <h2>1. Plotly nedir?</h2>
+  <p>Plotly Express, çok az kodla etkileşimli grafik üretmeyi sağlayan üst düzey bir görselleştirme paketidir. Daha alt düzeyde özel görselleştirmeler kurmaya imkân veren <b>Plotly Graph Objects</b> üzerine inşa edilmiştir. İK analitiğinde yöneticilere sunulan panolarda üzerine gelince değer gösteren, yakınlaştırılabilen grafikler bu yüzden sık tercih edilir.</p>
+  <h3>Plotly'i içe aktarma</h3>
+  <div class="hucre" data-kod="import"></div>
+</section>
+
+<!-- 2 -->
+<section id="s2">
+  <h2>2. Plotly'de etkileşimli kontroller</h2>
+  <p>Her grafiğin sağ üst köşesinde bir araç çubuğu bulunur (aşağıdaki herhangi bir grafikte deneyin):</p>
+  <table class="tbl">
+    <tr><th>Kontrol</th><th>İşlev</th><th>İK kullanım örneği</th></tr>
+    <tr><td>📷 PNG indir</td><td>Grafiği statik PNG olarak kaydeder</td><td>Yönetim kurulu sunumuna ekleme</td></tr>
+    <tr><td>Zoom</td><td>İlgilenilen bölgeye yakınlaşır</td><td>Belirli bir maaş aralığına odaklanma</td></tr>
+    <tr><td>Pan</td><td>Grafikte gezinir</td><td>Zaman serisinde aylar arasında kaydırma</td></tr>
+    <tr><td>Box Select</td><td>Dikdörtgen bölgeyi seçip vurgular</td><td>Yüksek performans–düşük maaş çalışanlarını işaretleme</td></tr>
+    <tr><td>Lasso Select</td><td>Serbest bölge çizerek seçer</td><td>Düzensiz bir çalışan kümesini seçme</td></tr>
+    <tr><td>Autoscale</td><td>En uygun ölçeğe döner</td><td>—</td></tr>
+    <tr><td>Reset axes</td><td>Grafiği ilk hâline getirir</td><td>—</td></tr>
+    <tr><td>Spike lines</td><td>Üzerine gelince eksenlere çizgi çeker</td><td>Bir çalışanın tam maaş/kıdem değerini okuma</td></tr>
+    <tr><td>Closest / Compare on hover</td><td>En yakın noktayı ya da aynı x'teki tüm değerleri gösterir</td><td>Aynı ayın işe alım ve ayrılma sayısını karşılaştırma</td></tr>
+  </table>
+</section>
+
+<!-- 3 -->
+<section id="s3">
+  <h2>3. Plotly Express kod kalıbı</h2>
+  <p>Grafik fonksiyonu çağrılır, ilk argüman olarak veri çerçevesi verilir. <code>x</code> bir sütun adıdır; <code>y</code> tek bir sütun adı ya da sütun adlarından oluşan liste olabilir. Kopya kâğıdındaki genel kalıp:</p>
+<pre style="background:#0b1220;color:#e5e7eb;padding:12px 14px;border-radius:8px;font-size:13px;overflow-x:auto">px.plotting_fn(dataframe,                 # Görselleştirilecek veri çerçevesi
+               x="column-for-x-axis",     # Metin ya da metin listesi
+               y=["columns-for-y-axis"],  # Metin ya da metin listesi
+               title="Overall plot title",
+               width=width_in_pixels,
+               height=height_in_pixels)</pre>
+  <div class="not"><b>Not:</b> Plotly Express fonksiyonları <code>xaxis_title</code>/<code>yaxis_title</code> argümanını doğrudan kabul etmez; eksen başlıkları <code>labels={...}</code> ile ya da <code>fig.update_layout(xaxis_title=..., yaxis_title=...)</code> ile verilir. Aşağıdaki hücre her iki yolu da gösteriyor.</div>
+  <div class="hucre" data-kod="kalip"></div>
+</section>
+
+<!-- 4 -->
+<section id="s4">
+  <h2>4. Saçılım grafikleri (scatter)</h2>
+  <p>Kopya kâğıdı: <code>px.scatter(clinical_data, x="experiment_1", y="experiment_2")</code>. İK sürümü: kıdem ile maaş arasındaki ilişki.</p>
+  <div class="hucre" data-kod="scatter1"></div>
+  <h3>Kabarcık grafiği: <code>size</code> argümanı</h3>
+  <p><code>size</code> sayısal bir sütun adına ayarlanırsa noktaların büyüklüğü bu sütuna göre değişir. Burada kabarcık büyüklüğü yıllık eğitim saatini, renk departmanı gösteriyor.</p>
+  <div class="hucre" data-kod="scatter2"></div>
+</section>
+
+<!-- 5 -->
+<section id="s5">
+  <h2>5. Çizgi grafikleri (line)</h2>
+  <p>Kopya kâğıdı: <code>px.line(stock_data, x="date", y=["FB", "AMZN"])</code>. İK sürümü: aylık işe alım ve ayrılma sayıları.</p>
+  <div class="hucre" data-kod="line1"></div>
+  <h3><code>line_dash</code> ile kategoriye göre kesikli çizgi</h3>
+  <p><code>line_dash</code> kategorik bir sütun adına ayarlanırsa her kategori farklı çizgi stiliyle (düz, noktalı, kesikli) çizilir. Burada her departmanın aylık devir oranı ayrı bir çizgi.</p>
+  <div class="hucre" data-kod="line2"></div>
+</section>
+
+<!-- 6 -->
+<section id="s6">
+  <h2>6. Çubuk grafikleri (bar)</h2>
+  <p>Kopya kâğıdı altın/gümüş/bronz madalya sayılarını <code>color_discrete_map</code> ile renklendiriyordu. İK sürümünde aynı mantık performans kademelerine uygulanıyor.</p>
+  <div class="hucre" data-kod="bar1"></div>
+  <h3>Yatay çubuklar: <code>x</code> ve <code>y</code>'yi yer değiştirme</h3>
+  <div class="hucre" data-kod="bar2"></div>
+</section>
+
+<!-- 7 -->
+<section id="s7">
+  <h2>7. Histogramlar</h2>
+  <p>Kopya kâğıdı: <code>px.histogram(bill_data, x="total_bill")</code>. İK sürümü: aylık brüt maaş dağılımı.</p>
+  <div class="hucre" data-kod="hist1"></div>
+  <h3><code>nbins</code> ile kutu sayısını belirleme</h3>
+  <div class="hucre" data-kod="hist2"></div>
+</section>
+
+<!-- 8 -->
+<section id="s8">
+  <h2>8. Isı haritaları (heatmap)</h2>
+  <p>Kopya kâğıdı: <code>px.imshow(iris_data.corr(numeric_only=True), zmin=-1, zmax=1, color_continuous_scale='rdbu')</code>. İK sürümü: çalışan değişkenleri arasındaki korelasyonlar. <code>text_auto=True</code> her hücreye değeri yazar.</p>
+  <div class="hucre" data-kod="heat"></div>
+</section>
+
+<!-- 9 -->
+<section id="s9">
+  <h2>9. Plotly'de grafik özelleştirme kalıbı</h2>
+  <p>Grafik fonksiyonunun döndürdüğü figür nesnesi bir değişkene kaydedilir, <code>.update_traces()</code> ile özelleştirilir, sonra <code>.show()</code> ile gösterilir.</p>
+<pre style="background:#0b1220;color:#e5e7eb;padding:12px 14px;border-radius:8px;font-size:13px">fig = px.some_plotting_function()   # Herhangi bir grafik
+fig.update_traces()                  # Özelleştir
+fig.show()                           # Göster</pre>
+</section>
+
+<!-- 10 -->
+<section id="s10">
+  <h2>10. İşaretçileri (marker) özelleştirme</h2>
+  <table class="tbl">
+    <tr><th>Özellik</th><th>İşlev</th></tr>
+    <tr><td><code>size</code></td><td>İşaretçi boyutu</td></tr>
+    <tr><td><code>color</code></td><td>İşaretçi rengi</td></tr>
+    <tr><td><code>opacity</code></td><td>Saydamlık (0–1)</td></tr>
+    <tr><td><code>line</code></td><td>Kenarlık kalınlığı ve rengi</td></tr>
+    <tr><td><code>symbol</code></td><td>Şekil ("circle", "square", "diamond", "cross"…)</td></tr>
+  </table>
+  <div class="hucre" data-kod="mark"></div>
+</section>
+
+<!-- 11 -->
+<section id="s11">
+  <h2>11. Çizgileri özelleştirme</h2>
+  <table class="tbl">
+    <tr><th>Özellik</th><th>İşlev / değerler</th></tr>
+    <tr><td><code>color</code></td><td>Çizgi rengi</td></tr>
+    <tr><td><code>dash</code></td><td>"solid", "dot", "dash", "longdash", "dashdot", "longdashdot"</td></tr>
+    <tr><td><code>shape</code></td><td>Noktaların bağlanma biçimi: "linear", "spline", "hv", "vh", "hvh", "vhv"</td></tr>
+    <tr><td><code>width</code></td><td>Çizgi kalınlığı</td></tr>
+  </table>
+  <div class="hucre" data-kod="lineC"></div>
+  <div class="not"><b>İpucu:</b> <code>shape="hv"</code> (basamak) kadro sayısı gibi yalnızca belirli tarihlerde değişen değişkenler için daha doğru bir görünüm verir. <code>shape</code> değerini değiştirip yeniden çalıştırın.</div>
+</section>
+
+<!-- 12 -->
+<section id="s12">
+  <h2>12. Çubukları özelleştirme</h2>
+  <p>Çubuk grafiklerde ve histogramlarda çubukların rengi, saydamlığı ve kenarlığı <code>marker</code> sözlüğüyle değiştirilir.</p>
+  <div class="hucre" data-kod="barC"></div>
+</section>
+
+<!-- 13 -->
+<section id="s13">
+  <h2>13. Histogramı özelleştirme</h2>
+  <div class="hucre" data-kod="histC"></div>
+</section>
+
+<!-- 14 -->
+<section id="s14">
+  <h2>14. Alıştırmalar (serbest hücre)</h2>
+  <p>Öğrendiklerinizi deneyin. Öneriler:</p>
+  <ol>
+    <li>Bağlılık puanı ile devamsızlık gün sayısı arasında, ayrılma durumuna göre renklendirilmiş bir saçılım grafiği çizin.</li>
+    <li>Departman başına ortalama maaşı yatay çubuk grafikle, büyükten küçüğe sıralı gösterin.</li>
+    <li>Ayrılan ve kalan çalışanların performans puanı dağılımını <code>color="ayrildi"</code> ve <code>barmode="overlay"</code> ile üst üste histogramda karşılaştırın.</li>
+  </ol>
+  <div class="hucre" data-kod="serbest"></div>
+</section>
+
+<footer>Kaynak: DataCamp, <i>Data Visualization with Plotly Express in Python</i> kopya kâğıdı · Veriler sentetiktir, öğretim amaçlıdır · Pyodide + Plotly</footer>
+</main>
+</div>
+
+<!-- ================= KOD HÜCRELERİ ================= -->
+<script type="text/plain" id="k-kurulum">
+import numpy as np
+import pandas as pd
+
+rng = np.random.default_rng(42)
+n = 400
+departmanlar = ["Satış", "Üretim", "Bilgi Teknolojileri", "Finans", "İnsan Kaynakları", "Pazarlama"]
+dept = rng.choice(departmanlar, size=n, p=[0.25, 0.30, 0.15, 0.10, 0.08, 0.12])
+
+taban = {"Satış": 32000, "Üretim": 28000, "Bilgi Teknolojileri": 48000,
+         "Finans": 42000, "İnsan Kaynakları": 36000, "Pazarlama": 38000}
+
+kidem = np.clip(rng.gamma(2.2, 3.0, n), 0, 35).round(1)
+yas = np.clip(22 + kidem + rng.normal(6, 4, n), 21, 64).round().astype(int)
+egitim_saati = np.clip(rng.normal(32, 12, n), 0, 90).round().astype(int)
+performans = np.clip(rng.normal(3.3, 0.7, n) + 0.01 * egitim_saati - 0.3, 1, 5).round(1)
+maas = (np.array([taban[d] for d in dept]) * (1 + 0.035 * kidem)
+        * (1 + 0.06 * (performans - 3)) * rng.normal(1, 0.08, n)).round(-2)
+baglilik = np.clip(rng.normal(3.5, 0.8, n) + 0.25 * (performans - 3.3), 1, 5).round(1)
+devamsizlik = np.clip(rng.poisson(6 - baglilik), 0, None)
+ayrilma_olasilik = 1 / (1 + np.exp(-(-1.2 - 1.1 * (baglilik - 3.5) - 0.08 * kidem)))
+ayrildi = np.where(rng.random(n) < ayrilma_olasilik, "Evet", "Hayır")
+
+calisanlar = pd.DataFrame({
+    "sicil_no": [f"S{1000+i}" for i in range(n)],
+    "departman": dept, "yas": yas, "kidem": kidem, "maas": maas,
+    "performans": performans, "baglilik": baglilik,
+    "egitim_saati": egitim_saati, "devamsizlik": devamsizlik, "ayrildi": ayrildi,
+})
+
+# Aylık işe alım / ayrılma zaman serisi (2022-2025)
+aylar = pd.date_range("2022-01-01", "2025-12-01", freq="MS")
+mevsim = 1 + 0.25 * np.sin(2 * np.pi * (aylar.month - 3) / 12)
+aylik_ik = pd.DataFrame({
+    "tarih": aylar,
+    "ise_alim": rng.poisson(28 * mevsim),
+    "ayrilma": rng.poisson(22 * mevsim[::-1]),
+})
+aylik_ik["kadro"] = 1200 + (aylik_ik["ise_alim"] - aylik_ik["ayrilma"]).cumsum()
+aylik_ik["devir_orani"] = (100 * aylik_ik["ayrilma"] / aylik_ik["kadro"]).round(2)
+
+# Departman bazında aylık devir oranı (uzun format)
+kayitlar = []
+dev_taban = {"Satış": 2.6, "Üretim": 2.1, "Bilgi Teknolojileri": 1.6,
+             "Finans": 1.0, "İnsan Kaynakları": 1.2, "Pazarlama": 1.8}
+for d in departmanlar:
+    seri = np.clip(dev_taban[d] * mevsim + rng.normal(0, 0.25, len(aylar)), 0.2, None)
+    kayitlar.append(pd.DataFrame({"tarih": aylar, "departman": d, "devir_orani": seri.round(2)}))
+dept_devir = pd.concat(kayitlar, ignore_index=True)
+
+# Departman x performans kademesi (geniş format)
+calisanlar["perf_kademe"] = pd.cut(calisanlar["performans"], [0, 2.9, 3.9, 5],
+                                   labels=["Düşük", "Orta", "Yüksek"])
+dept_performans = (calisanlar.pivot_table(index="departman", columns="perf_kademe",
+                                          values="sicil_no", aggfunc="count", observed=False)
+                   .reset_index()[["departman", "Yüksek", "Orta", "Düşük"]])
+dept_performans.columns.name = None
+
+print("calisanlar      :", calisanlar.shape)
+print("aylik_ik        :", aylik_ik.shape)
+print("dept_devir      :", dept_devir.shape)
+print("dept_performans :", dept_performans.shape)
+calisanlar.head()
+</script>
+
+<script type="text/plain" id="k-import">
+# plotly express'i px olarak içe aktar
+import plotly.express as px
+print("Plotly sürümü:", __import__("plotly").__version__)
+</script>
+
+<script type="text/plain" id="k-kalip">
+fig = px.scatter(calisanlar,                       # Görselleştirilecek veri çerçevesi
+                 x="yas",                          # x ekseni sütunu
+                 y="maas",                         # y ekseni sütunu
+                 title="Yaş ve Aylık Brüt Maaş",   # Genel başlık
+                 labels={"yas": "Yaş (yıl)",       # Eksen başlığı (1. yol)
+                         "maas": "Maaş (TL)"},
+                 width=800,                        # Piksel cinsinden genişlik
+                 height=420)                       # Piksel cinsinden yükseklik
+
+# Eksen başlığı (2. yol): update_layout ile
+fig.update_layout(xaxis_title="Çalışanın yaşı", yaxis_title="Aylık brüt maaş (TL)")
+fig.show()
+</script>
+
+<script type="text/plain" id="k-scatter1">
+# calisanlar veri çerçevesinde saçılım grafiği
+px.scatter(calisanlar, x="kidem", y="maas",
+           title="Kıdem (yıl) ile Maaş İlişkisi",
+           hover_data=["sicil_no", "departman"])
+</script>
+
+<script type="text/plain" id="k-scatter2">
+# size argümanı sayısal bir sütun olunca kabarcık grafiği oluşur
+px.scatter(calisanlar, x="performans", y="maas",
+           size="egitim_saati",          # kabarcık büyüklüğü = yıllık eğitim saati
+           color="departman",
+           size_max=22, opacity=0.7,
+           title="Performans – Maaş (kabarcık: eğitim saati)",
+           hover_name="sicil_no")
+</script>
+
+<script type="text/plain" id="k-line1">
+# aylik_ik veri çerçevesinde çizgi grafiği (y'ye sütun listesi)
+px.line(aylik_ik, x="tarih", y=["ise_alim", "ayrilma"],
+        title="Aylık İşe Alım ve Ayrılma Sayıları",
+        labels={"value": "Kişi sayısı", "variable": "Hareket", "tarih": "Ay"})
+</script>
+
+<script type="text/plain" id="k-line2">
+# line_dash kategorik sütuna ayarlanırsa her kategori farklı çizgi stiliyle çizilir
+px.line(dept_devir, x="tarih", y="devir_orani",
+        color="departman", line_dash="departman",
+        title="Departmanlara Göre Aylık Devir Oranı (%)",
+        labels={"devir_orani": "Devir oranı (%)", "tarih": "Ay"})
+</script>
+
+<script type="text/plain" id="k-bar1">
+# dept_performans veri çerçevesinde yığılmış çubuk grafiği
+px.bar(dept_performans, x="departman", y=["Yüksek", "Orta", "Düşük"],
+       color_discrete_map={"Yüksek": "seagreen",
+                           "Orta": "gold",
+                           "Düşük": "indianred"},
+       title="Departmanlara Göre Performans Kademesi Dağılımı",
+       labels={"value": "Çalışan sayısı", "variable": "Kademe"})
+</script>
+
+<script type="text/plain" id="k-bar2">
+# x ve y yer değiştirince yatay çubuk elde edilir
+px.bar(dept_performans, y="departman", x=["Yüksek", "Orta", "Düşük"],
+       color_discrete_map={"Yüksek": "seagreen", "Orta": "gold", "Düşük": "indianred"},
+       title="Performans Kademeleri (yatay)",
+       labels={"value": "Çalışan sayısı", "variable": "Kademe"})
+</script>
+
+<script type="text/plain" id="k-hist1">
+# Maaş dağılımının histogramı
+px.histogram(calisanlar, x="maas", title="Aylık Brüt Maaş Dağılımı",
+             labels={"maas": "Maaş (TL)"})
+</script>
+
+<script type="text/plain" id="k-hist2">
+# nbins ile kutu sayısını kontrol et (10, 50 gibi değerleri deneyin)
+px.histogram(calisanlar, x="maas", nbins=20, color="departman",
+             title="Maaş Dağılımı (20 kutu, departmana göre)",
+             labels={"maas": "Maaş (TL)"})
+</script>
+
+<script type="text/plain" id="k-heat">
+# Sayısal İK değişkenlerinin korelasyon ısı haritası
+px.imshow(calisanlar.corr(numeric_only=True),
+          zmin=-1, zmax=1, color_continuous_scale="rdbu",
+          text_auto=".2f",            # True da olabilir; burada 2 ondalık
+          title="İK Değişkenleri Korelasyon Matrisi",
+          width=700, height=600)
+</script>
+
+<script type="text/plain" id="k-mark">
+# Bu örnekte fig_sct adlı saçılım grafiğini güncelliyoruz
+fig_sct = px.scatter(calisanlar, x="baglilik", y="devamsizlik",
+                     title="Bağlılık Puanı ve Devamsızlık Günleri",
+                     labels={"baglilik": "Bağlılık (1-5)", "devamsizlik": "Devamsızlık (gün)"})
+
+fig_sct.update_traces(marker={"size": 14,
+                              "color": "magenta",
+                              "opacity": 0.5,
+                              "line": {"width": 2, "color": "cyan"},
+                              "symbol": "square"})
+fig_sct.show()
+</script>
+
+<script type="text/plain" id="k-lineC">
+# Bu örnekte fig_ln adlı çizgi grafiğini güncelliyoruz
+fig_ln = px.line(aylik_ik, x="tarih", y="kadro",
+                 title="Toplam Kadro (Aylık)",
+                 labels={"kadro": "Çalışan sayısı", "tarih": "Ay"})
+
+fig_ln.update_traces(patch={"line": {"dash": "dot",
+                                     "shape": "spline",
+                                     "width": 6}})
+fig_ln.show()
+</script>
+
+<script type="text/plain" id="k-barC">
+# Bu örnekte fig_bar adlı çubuk grafiğini güncelliyoruz
+ort_maas = calisanlar.groupby("departman", as_index=False)["maas"].mean().round(0)
+fig_bar = px.bar(ort_maas, x="departman", y="maas",
+                 title="Departmanlara Göre Ortalama Maaş",
+                 labels={"maas": "Ortalama maaş (TL)"})
+
+fig_bar.update_traces(marker={"color": "magenta",
+                              "opacity": 0.5,
+                              "line": {"width": 2, "color": "cyan"}})
+fig_bar.show()
+</script>
+
+<script type="text/plain" id="k-histC">
+# Bu örnekte fig_hst adlı histogramı güncelliyoruz
+fig_hst = px.histogram(calisanlar, x="egitim_saati", nbins=18,
+                       title="Yıllık Eğitim Saati Dağılımı",
+                       labels={"egitim_saati": "Eğitim saati"})
+
+fig_hst.update_traces(marker={"color": "magenta",
+                              "opacity": 0.5,
+                              "line": {"width": 2, "color": "cyan"}})
+fig_hst.show()
+</script>
+
+<script type="text/plain" id="k-serbest">
+# Alıştırma 1 için başlangıç kodu — düzenleyip çalıştırın
+fig = px.scatter(calisanlar, x="baglilik", y="devamsizlik", color="ayrildi",
+                 color_discrete_map={"Evet": "crimson", "Hayır": "steelblue"},
+                 title="Bağlılık – Devamsızlık (ayrılma durumuna göre)")
+fig.show()
+</script>
+
+<!-- ================= ÇALIŞTIRMA MOTORU ================= -->
+<script>
+let pyodide = null;
+let hazir = false;
+const varsayilan = {};
+let grafikSayaci = 0;
+
+function durum(yazi, sinif) {
+  document.getElementById("durumYazi").textContent = yazi;
+  const n = document.getElementById("durumNokta");
+  n.className = "nokta" + (sinif ? " " + sinif : "");
+}
+
+// Hücreleri kur
+document.querySelectorAll(".hucre").forEach((h, i) => {
+  const ad = h.dataset.kod;
+  const kod = document.getElementById("k-" + ad).textContent.replace(/^\n/, "").replace(/\s+$/, "");
+  varsayilan[ad] = kod;
+  h.innerHTML = `
+    <div class="hucre-ust"><span>In [${i + 1}] · Python</span>
+      <div class="btns"><button class="sifirla">↺ Sıfırla</button><button class="calistir" disabled>▶ Çalıştır</button></div></div>
+    <textarea class="kod" spellcheck="false"></textarea>`;
+  const ta = h.querySelector("textarea");
+  ta.value = kod;
+  const boyutla = () => { ta.style.height = "auto"; ta.style.height = (ta.scrollHeight + 4) + "px"; };
+  ta.addEventListener("input", boyutla);
+  setTimeout(boyutla, 0);
+  ta.addEventListener("keydown", e => {
+    if (e.key === "Tab") { e.preventDefault(); const s = ta.selectionStart;
+      ta.value = ta.value.slice(0, s) + "    " + ta.value.slice(ta.selectionEnd);
+      ta.selectionStart = ta.selectionEnd = s + 4; }
+    if ((e.ctrlKey || e.shiftKey) && e.key === "Enter") { e.preventDefault(); calistir(h); }
+  });
+  const cikti = document.createElement("div");
+  cikti.className = "cikti";
+  h.after(cikti);
+  h._cikti = cikti;
+  h.querySelector(".calistir").onclick = () => calistir(h);
+  h.querySelector(".sifirla").onclick = () => { ta.value = varsayilan[ad]; boyutla(); };
+});
+
+// Python tarafından çağrılan grafik çizici
+window.grafikCiz = function (figJson) {
+  const hedef = window._aktifCikti;
+  const fig = JSON.parse(figJson);
+  const div = document.createElement("div");
+  div.className = "grafik";
+  div.id = "grafik-" + (++grafikSayaci);
+  hedef.appendChild(div);
+  const layout = fig.layout || {};
+  if (!layout.width) layout.autosize = true;
+  Plotly.newPlot(div, fig.data, layout, {responsive: true, displaylogo: false,
+    toImageButtonOptions: {format: "png", filename: "ik_grafik", scale: 2}});
+};
+
+const PY_MOTOR = `
+import sys, io, ast, traceback, json
+import js
+
+def _goster(fig, *a, **k):
+    js.grafikCiz(fig.to_json())
+
+import plotly.basedatatypes as _bdt
+_bdt.BaseFigure.show = _goster
+
+def _html_tablo(df):
+    return df.to_string(max_rows=12, max_cols=12)
+
+def _calistir(kod, g):
+    tampon = io.StringIO()
+    eski = sys.stdout, sys.stderr
+    sys.stdout = sys.stderr = tampon
+    hata = None
+    try:
+        agac = ast.parse(kod)
+        son = None
+        if agac.body and isinstance(agac.body[-1], ast.Expr):
+            son = ast.Expression(agac.body.pop().value)
+        exec(compile(agac, "<hücre>", "exec"), g)
+        if son is not None:
+            sonuc = eval(compile(son, "<hücre>", "eval"), g)
+            if sonuc is not None:
+                if isinstance(sonuc, _bdt.BaseFigure):
+                    _goster(sonuc)
+                elif hasattr(sonuc, "to_string"):
+                    print(_html_tablo(sonuc))
+                else:
+                    print(repr(sonuc))
+    except Exception:
+        hata = traceback.format_exc(limit=-3)
+    finally:
+        sys.stdout, sys.stderr = eski
+    return json.dumps({"cikti": tampon.getvalue(), "hata": hata})
+`;
+
+let ns = null;
+
+async function calistir(h) {
+  if (!hazir) return;
+  const btn = h.querySelector(".calistir");
+  const cikti = h._cikti;
+  btn.disabled = true; btn.textContent = "⏳ Çalışıyor";
+  cikti.innerHTML = "";
+  window._aktifCikti = cikti;
+  try {
+    const kod = h.querySelector("textarea").value;
+    const sonuc = JSON.parse(pyodide.globals.get("_calistir")(kod, ns));
+    if (sonuc.cikti) {
+      const pre = document.createElement("pre"); pre.textContent = sonuc.cikti; cikti.prepend(pre);
+    }
+    if (sonuc.hata) {
+      const pre = document.createElement("pre"); pre.className = "hata"; pre.textContent = sonuc.hata; cikti.appendChild(pre);
+    }
+  } catch (e) {
+    cikti.innerHTML = `<pre class="hata">${e}</pre>`;
+  }
+  btn.disabled = false; btn.textContent = "▶ Çalıştır";
+}
+
+async function baslat() {
+  try {
+    durum("Pyodide yükleniyor…");
+    pyodide = await loadPyodide();
+    durum("numpy ve pandas yükleniyor…");
+    await pyodide.loadPackage(["numpy", "pandas", "micropip"]);
+    durum("plotly kuruluyor…");
+    await pyodide.runPythonAsync(`
+import micropip
+await micropip.install("plotly==5.24.1")
+`);
+    await pyodide.runPythonAsync(PY_MOTOR);
+    ns = pyodide.toPy({});
+    hazir = true;
+    durum("Hazır — önce 0. hücreyi çalıştırın", "hazir");
+    document.querySelectorAll(".calistir").forEach(b => b.disabled = false);
+    document.getElementById("hepsiniCalistir").disabled = false;
+    // Veri ve import hücrelerini otomatik çalıştır
+    for (const ad of ["kurulum", "import"]) await calistir(document.querySelector(`.hucre[data-kod="${ad}"]`));
+    durum("Hazır — veri setleri yüklendi", "hazir");
+  } catch (e) {
+    durum("Yükleme hatası: " + e.message, "hata");
+    console.error(e);
+  }
+}
+
+document.getElementById("hepsiniCalistir").onclick = async () => {
+  for (const h of document.querySelectorAll(".hucre")) {
+    await calistir(h);
+    await new Promise(r => setTimeout(r, 20));
+  }
+};
+
+baslat();
+</script>
+</body>
+</html>

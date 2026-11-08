@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pandas ile İK Veri Analizi — Aranabilir Etkileşimli Kopya Kâğıdı (Pyodide)</title>
+<script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
+<style>
+  :root{
+    --bg:#f5f6fa; --card:#fff; --ink:#1f2937; --muted:#6b7280; --line:#e5e7eb;
+    --accent:#0e7c66; --accent-d:#0a5c4c; --accent-l:#e3f4ef;
+    --code:#0b1220; --codeink:#e5e7eb; --warn:#fff7e6; --warnb:#f59e0b; --err:#b91c1c;
+  }
+  *{box-sizing:border-box}
+  html{scroll-padding-top:150px}
+  body{margin:0;font-family:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);line-height:1.55}
+  header{background:linear-gradient(120deg,#0a5c4c,#13a383);color:#fff;padding:26px 24px 18px}
+  header h1{margin:0 0 4px;font-size:1.65rem}
+  header p{margin:0;opacity:.92;max-width:980px;font-size:.96rem}
+  .durum{margin-top:12px;display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.16);padding:5px 12px;border-radius:999px;font-size:.88rem}
+  .nokta{width:10px;height:10px;border-radius:50%;background:#fbbf24;animation:nabiz 1s infinite}
+  .nokta.hazir{background:#4ade80;animation:none} .nokta.hata{background:#f87171;animation:none}
+  @keyframes nabiz{50%{opacity:.3}}
+  .ara-kutu{position:sticky;top:0;z-index:20;background:rgba(245,246,250,.96);backdrop-filter:blur(6px);border-bottom:1px solid var(--line);padding:12px 24px}
+  .ara-ic{max-width:1300px;margin:0 auto}
+  .ara-satir{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  #ara{flex:1;min-width:260px;font-size:1rem;padding:11px 14px 11px 40px;border:2px solid #cfd8dc;border-radius:10px;outline:none;
+       background:#fff url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="%236b7280" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>') no-repeat 13px center}
+  #ara:focus{border-color:var(--accent)}
+  #sonucSayisi{font-size:.9rem;color:var(--muted);min-width:120px}
+  .btn{border:0;border-radius:8px;padding:9px 14px;font-size:.88rem;cursor:pointer;font-weight:600;background:var(--accent);color:#fff}
+  .btn.ikincil{background:#fff;color:var(--accent);border:1px solid var(--accent)}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .cipler{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
+  .cip{border:1px solid #cfd8dc;background:#fff;border-radius:999px;padding:3px 11px;font-size:.8rem;cursor:pointer;color:#374151}
+  .cip.aktif{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .cip .say{opacity:.7;margin-left:3px}
+  .oneriler{font-size:.8rem;color:var(--muted);margin-top:7px}
+  .oneriler a{color:var(--accent);cursor:pointer;margin-right:8px;text-decoration:underline dotted}
+  .yerlesim{display:grid;grid-template-columns:230px 1fr;gap:22px;max-width:1300px;margin:0 auto;padding:20px 24px}
+  nav{position:sticky;top:150px;align-self:start;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;max-height:calc(100vh - 170px);overflow:auto}
+  nav h3{margin:0 0 6px;font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+  nav a{display:flex;justify-content:space-between;padding:5px 8px;border-radius:6px;color:var(--ink);text-decoration:none;font-size:.88rem}
+  nav a:hover{background:var(--accent-l);color:var(--accent-d)}
+  nav a .say{color:var(--muted);font-size:.78rem}
+  nav a.bos{opacity:.35}
+  .bolum{margin-bottom:26px}
+  .bolum>h2{margin:0 0 4px;color:var(--accent-d);font-size:1.25rem;border-bottom:2px solid var(--accent-l);padding-bottom:4px}
+  .bolum>.bolum-ac{color:var(--muted);font-size:.9rem;margin:4px 0 10px}
+  .kart{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:12px}
+  .kart-bas{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap}
+  .komut{font-family:"JetBrains Mono","Fira Code",Consolas,monospace;font-size:.95rem;font-weight:700;color:#0b5394;background:#eef4fb;padding:3px 8px;border-radius:6px;word-break:break-all}
+  .aciklama{margin:7px 0 2px;font-size:.94rem}
+  .ingilizce{font-size:.8rem;color:var(--muted);font-style:italic}
+  .uyari{background:var(--warn);border-left:4px solid var(--warnb);padding:7px 11px;border-radius:6px;font-size:.86rem;margin:8px 0 2px}
+  mark{background:#fde68a;color:inherit;padding:0 1px;border-radius:2px}
+  .hucre{margin-top:10px;border:1px solid #1f2a44;border-radius:9px;overflow:hidden}
+  .hucre-ust{display:flex;justify-content:space-between;align-items:center;background:#16213a;color:#cbd5e1;padding:5px 9px;font-size:.78rem}
+  .hucre-ust .btns{display:flex;gap:6px}
+  .hucre-ust button{border:0;border-radius:6px;padding:4px 11px;font-size:.78rem;cursor:pointer;font-weight:600}
+  .calistir{background:#22c55e;color:#052e14} .calistir:disabled{background:#475569;color:#cbd5e1;cursor:not-allowed}
+  .sifirla,.kopyala{background:#334155;color:#e2e8f0}
+  textarea.kod{display:block;width:100%;min-height:60px;resize:vertical;border:0;outline:none;background:var(--code);color:var(--codeink);
+    font-family:"JetBrains Mono","Fira Code",Consolas,monospace;font-size:13px;line-height:1.5;padding:10px 12px;tab-size:4;white-space:pre;overflow-x:auto}
+  .cikti{border:1px solid var(--line);border-top:0;border-radius:0 0 9px 9px;margin-top:-3px;max-height:440px;overflow:auto}
+  .cikti:empty{display:none}
+  .cikti pre{margin:0;padding:9px 12px;font-size:12.5px;background:#f9fafb;white-space:pre-wrap}
+  .cikti pre.hata{color:var(--err);background:#fef2f2}
+  .cikti .tablo-sar{padding:8px 10px}
+  table.dataframe{border-collapse:collapse;font-size:12.5px;font-family:Consolas,monospace}
+  table.dataframe th,table.dataframe td{border:1px solid #e5e7eb;padding:4px 8px;text-align:right;white-space:nowrap}
+  table.dataframe thead th{background:#f1f5f9;position:sticky;top:0}
+  table.dataframe tbody th{background:#f8fafc;text-align:left}
+  table.dataframe tbody tr:nth-child(even) td{background:#fafafa}
+  .boyut{font-size:11.5px;color:var(--muted);padding:0 10px 8px}
+  .veri-tablo{border-collapse:collapse;width:100%;font-size:.88rem;margin:6px 0}
+  .veri-tablo th,.veri-tablo td{border:1px solid var(--line);padding:5px 8px;text-align:left;vertical-align:top}
+  .veri-tablo th{background:#f3f4f6}
+  code{background:#eef2f7;padding:1px 5px;border-radius:4px;font-size:.88em}
+  #bulunamadi{display:none;background:#fff;border:1px dashed #cbd5e1;border-radius:12px;padding:28px;text-align:center;color:var(--muted)}
+  footer{text-align:center;color:var(--muted);font-size:.83rem;padding:6px 0 30px}
+  @media (max-width:920px){.yerlesim{grid-template-columns:1fr} nav{display:none}}
+</style>
+</head>
+<body>
+<div id="jsYok" style="background:#fef3c7;border-bottom:2px solid #f59e0b;color:#78350f;padding:12px 20px;font:15px/1.5 system-ui,sans-serif">
+<b>⚠ Çalıştır düğmeleri görünmüyorsa:</b> Bu sayfa JavaScript ile çalışır; uygulamanın dosya önizleme penceresi betikleri çalıştırmaz.
+Dosyayı <b>indirip</b> bilgisayarınızda <b>Chrome, Edge veya Firefox</b> ile açın (çift tıklamak yeterli). İlk açılışta internet bağlantısı gerekir.</div>
+<script>document.getElementById("jsYok").remove()</script>
+<header>
+  <a href="index.html" style="color:#fff;opacity:.85;text-decoration:none;font-size:.88rem;display:inline-block;margin-bottom:6px">← Tüm kopya kâğıtları</a>
+  <h1>Pandas ile İK Veri Analizi</h1>
+  <p>Dataquest “Pandas Data Science Cheat Sheet” kopya kâğıdındaki tüm komutlar insan kaynakları verisiyle yeniden yazıldı. Kodlar tarayıcıda <b>Pyodide</b> ile çalışır. Her hücreyi düzenleyip çalıştırabilir, üstteki arama kutusundan komut adı, Türkçe ya da İngilizce açıklama veya kod içinde arama yapabilirsiniz.</p>
+  <div class="durum"><span class="nokta" id="durumNokta"></span><span id="durumYazi">Python ortamı yükleniyor…</span></div>
+</header>
+
+<div class="ara-kutu">
+  <div class="ara-ic">
+    <div class="ara-satir">
+      <input id="ara" type="search" placeholder="Ara: groupby, eksik değer, sırala, birleştir, excel, korelasyon…  ( / tuşu ile odaklan )" autocomplete="off">
+      <span id="sonucSayisi"></span>
+      <button class="btn ikincil" id="veriSifirla" disabled title="df ve diğer veri setlerini ilk hâline döndürür">↺ Veriyi sıfırla</button>
+      <button class="btn" id="gorunenleriCalistir" disabled>▶ Görünenleri çalıştır</button>
+    </div>
+    <div class="cipler" id="cipler"></div>
+    <div class="oneriler">Örnek aramalar:
+      <a data-q="eksik">eksik</a><a data-q="grupla">grupla</a><a data-q="sırala">sırala</a><a data-q="excel">excel</a>
+      <a data-q="sql">sql</a><a data-q="maaş">maaş</a><a data-q="pivot">pivot</a><a data-q="join">join</a><a data-q="iloc">iloc</a><a data-q="ortalama">ortalama</a>
+    </div>
+  </div>
+</div>
+
+<div class="yerlesim">
+  <nav><h3>Bölümler</h3><div id="icindekiler"></div></nav>
+  <main>
+    <div class="bolum" id="b-veri">
+      <h2>Kullanılan İK veri setleri</h2>
+      <p class="bolum-ac">Kopya kâğıdındaki kısaltmalar: <code>df</code> = DataFrame, <code>s</code> = Series. Sayfa açılınca aşağıdaki nesneler ve sanal dosyalar otomatik oluşturulur.</p>
+      <table class="veri-tablo">
+        <tr><th>Nesne / dosya</th><th>İçerik</th></tr>
+        <tr><td><code>df</code></td><td>200 çalışan: sicil_no, departman, calisma_sekli, egitim_duzeyi (1–4 kodlu), yas, kidem, maas, performans, egitim_saati, devamsizlik, sertifika. <b>Bilinçli olarak eksik değer içerir</b> (maaş, eğitim saati, sertifika).</td></tr>
+        <tr><td><code>s</code></td><td><code>df["maas"]</code> serisi</td></tr>
+        <tr><td><code>sayisal</code></td><td><code>df</code>'nin yalnızca sayısal sütunları</td></tr>
+        <tr><td><code>departman_df</code></td><td>Departman ana verisi: yönetici, lokasyon, bütçe (birleştirme örnekleri için)</td></tr>
+        <tr><td><code>df1</code>, <code>df2</code></td><td><code>df</code>'nin iki küçük parçası (concat örnekleri için)</td></tr>
+        <tr><td>calisanlar.csv / .tsv / .xlsx / .json, departmanlar.html, ik.db</td><td>Pyodide sanal dosya sistemindeki örnek dosyalar (okuma komutları için)</td></tr>
+      </table>
+      <div class="kart"><div class="kart-bas"><span class="komut">Veri kurulumu</span></div>
+        <div class="aciklama">Veri setlerini üreten kod. Düzenleyip yeniden çalıştırabilirsiniz.</div>
+        <div id="kurulumHucre"></div>
+      </div>
+    </div>
+    <div id="bolumler"></div>
+    <div id="bulunamadi">Aramanızla eşleşen komut bulunamadı. Daha kısa bir kelime ya da İngilizce karşılığını deneyin.</div>
+    <footer>Kaynak: Dataquest, <i>Data Science Cheat Sheet: Pandas</i> · Veriler sentetiktir, öğretim amaçlıdır · Pyodide + pandas</footer>
+  </main>
+</div>
+
+<!-- =============== KURULUM KODU =============== -->
+<script type="text/plain" id="kurulumKod">
+import pandas as pd
+import numpy as np
+import sqlite3, io
+
+rng = np.random.default_rng(7)
+n = 200
+departmanlar = ["Satış", "Üretim", "Bilgi Teknolojileri", "Finans", "İnsan Kaynakları", "Pazarlama"]
+taban = {"Satış": 32000, "Üretim": 28000, "Bilgi Teknolojileri": 48000,
+         "Finans": 42000, "İnsan Kaynakları": 36000, "Pazarlama": 38000}
+
+dept = rng.choice(departmanlar, n, p=[.25, .30, .15, .10, .08, .12])
+kidem = rng.gamma(2, 3, n).round(1)
+performans = np.clip(rng.normal(3.4, 0.6, n), 1, 5).round(1)
+
+df = pd.DataFrame({
+    "sicil_no": [f"S{1000 + i}" for i in range(n)],
+    "departman": dept,
+    "calisma_sekli": rng.choice(["Tam zamanlı", "Yarı zamanlı", "Uzaktan"], n, p=[.7, .1, .2]),
+    "egitim_duzeyi": rng.choice([1, 2, 3, 4], n, p=[.15, .55, .22, .08]),
+    "yas": np.clip(23 + kidem + rng.normal(6, 4, n), 21, 64).round().astype(int),
+    "kidem": kidem,
+    "maas": (np.array([taban[d] for d in dept]) * (1 + .035 * kidem)
+             * (1 + .06 * (performans - 3)) * rng.normal(1, .08, n)).round(-2),
+    "performans": performans,
+    "egitim_saati": np.clip(rng.normal(32, 12, n), 0, 90).round(),
+    "devamsizlik": rng.poisson(4, n),
+    "sertifika": np.where(rng.random(n) < .15, rng.choice(["PMP", "SHRM", "CIPD"], n), None),
+})
+# Bilinçli eksik değerler
+df.loc[rng.choice(n, 10, replace=False), "maas"] = np.nan
+df.loc[rng.choice(n, 16, replace=False), "egitim_saati"] = np.nan
+
+s = df["maas"]
+sayisal = df.select_dtypes("number")
+
+departman_df = pd.DataFrame({
+    "departman": departmanlar,
+    "yonetici": ["A. Yılmaz", "M. Demir", "E. Kaya", "S. Çelik", "Z. Şahin", "B. Aydın"],
+    "lokasyon": ["İstanbul", "Sakarya", "İstanbul", "Ankara", "Sakarya", "İzmir"],
+    "butce_mtl": [42.5, 61.0, 38.2, 18.7, 9.4, 22.1],
+}).set_index("departman")
+
+df1 = df.iloc[:5, :4]
+df2 = df.iloc[5:8, :4]
+
+# Sanal dosya sistemine örnek dosyalar
+df.to_csv("calisanlar.csv", index=False)
+df.to_csv("calisanlar.tsv", sep="\t", index=False)
+df.to_json("calisanlar.json", orient="records", force_ascii=False)
+departman_df.reset_index().to_html("departmanlar.html", index=False)
+try:
+    df.to_excel("calisanlar.xlsx", index=False)
+except ImportError:
+    print("Uyarı: openpyxl yüklenemedi, Excel örnekleri çalışmayacak.")
+with sqlite3.connect("ik.db") as con:
+    df.to_sql("calisanlar", con, index=False, if_exists="replace")
+    departman_df.reset_index().to_sql("departmanlar", con, index=False, if_exists="replace")
+
+print("df:", df.shape, "| eksik değer:", int(df.isnull().sum().sum()))
+df.head()
+</script>
+
+<!-- =============== KOMUT VERİSİ =============== -->
+<script>
+const BOLUMLER = [
+{ id:"imports", baslik:"Temel içe aktarmalar", en:"Key imports", ac:"Başlamak için içe aktarın.", ogeler:[
+ {k:"import pandas as pd", tr:"pandas kütüphanesini pd kısaltmasıyla içe aktarır.", en:"Import pandas",
+  kod:`import pandas as pd
+print("pandas sürümü:", pd.__version__)`},
+ {k:"import numpy as np", tr:"numpy kütüphanesini np kısaltmasıyla içe aktarır.", en:"Import numpy",
+  kod:`import numpy as np
+print("numpy sürümü:", np.__version__)`},
+]},
+{ id:"importing", baslik:"Veri içe aktarma", en:"Importing data", ac:"Farklı kaynaklardan İK verisi okuma.", ogeler:[
+ {k:"pd.read_csv(filename)", tr:"CSV dosyasından okur.", en:"From a CSV file",
+  kod:`pd.read_csv("calisanlar.csv").head()`},
+ {k:"pd.read_table(filename)", tr:"Ayraçlı metin dosyasından (ör. TSV, sekmeyle ayrılmış) okur.", en:"From a delimited text file (like TSV)",
+  kod:`pd.read_table("calisanlar.tsv").head()`},
+ {k:"pd.read_excel(filename)", tr:"Excel dosyasından okur.", en:"From an Excel file",
+  kod:`pd.read_excel("calisanlar.xlsx", sheet_name=0).head()`},
+ {k:"pd.read_sql(query, connection_object)", tr:"SQL tablosundan veya veritabanından okur. Burada İKBS benzeri bir SQLite veritabanı kullanılıyor.", en:"Reads from a SQL table/database",
+  kod:`con = sqlite3.connect("ik.db")
+sorgu = """
+SELECT departman, COUNT(*) AS kisi, ROUND(AVG(maas)) AS ort_maas
+FROM calisanlar
+GROUP BY departman
+ORDER BY ort_maas DESC
+"""
+pd.read_sql(sorgu, con)`},
+ {k:"pd.read_json(json_string)", tr:"JSON biçimli bir metinden, URL'den ya da dosyadan okur (ör. bir İK yazılımının API yanıtı).", en:"Reads from a JSON formatted string, URL or file",
+  kod:`json_metni = '''[
+ {"sicil_no": "S9001", "departman": "Finans", "maas": 45000},
+ {"sicil_no": "S9002", "departman": "Satış",  "maas": 38000}
+]'''
+pd.read_json(io.StringIO(json_metni))`,
+  not:"pandas 2.x'te doğrudan metin vermek uyarı üretir; metni io.StringIO ile sarmalayın."},
+ {k:"pd.read_html(url)", tr:"HTML sayfasındaki, metindeki ya da dosyadaki tabloları ayrıştırır ve DataFrame listesi döndürür.", en:"Parses an html URL, string or file and extracts tables to a list of dataframes",
+  kod:`tablolar = pd.read_html("departmanlar.html")
+print(len(tablolar), "tablo bulundu")
+tablolar[0]`,
+  not:"Tarayıcı güvenliği nedeniyle Pyodide başka sitelerden doğrudan HTML çekemez; burada sanal dosya kullanılıyor."},
+ {k:"pd.read_clipboard()", tr:"Panodaki içeriği alıp read_table()'a verir (ör. Excel'den kopyalanan tablo).", en:"Takes the contents of your clipboard and passes it to read_table()",
+  kod:`# Tarayıcıda karşılığı: kopyaladığınız tabloyu aşağıdaki metnin içine yapıştırın
+pano_metni = """sicil_no\tdepartman\tmaas
+S2001\tFinans\t41000
+S2002\tÜretim\t29500
+S2003\tSatış\t33800"""
+pd.read_table(io.StringIO(pano_metni))`,
+  not:"Pyodide'de read_clipboard() çalışmaz; aynı sonuç read_table + io.StringIO ile alınır."},
+ {k:"pd.DataFrame(dict)", tr:"Sözlükten oluşturur: anahtarlar sütun adları, liste değerleri veri olur.", en:"From a dict, keys for columns names, values for data as lists",
+  kod:`adaylar = pd.DataFrame({
+    "aday": ["Ayşe K.", "Mehmet T.", "Elif S."],
+    "pozisyon": ["İK Uzmanı", "Bordro Uzmanı", "İK Analisti"],
+    "mulakat_puani": [82, 74, 91],
+})
+adaylar`},
+]},
+{ id:"exporting", baslik:"Veri dışa aktarma", en:"Exporting data", ac:"Dosyalar sanal sisteme yazılır; indir(\"dosya\") ile bilgisayarınıza indirebilirsiniz.", ogeler:[
+ {k:"df.to_csv(filename)", tr:"CSV dosyasına yazar.", en:"Writes to a CSV file",
+  kod:`df.to_csv("ihrac.csv", index=False)
+print(open("ihrac.csv", encoding="utf-8").read()[:300])
+# indir("ihrac.csv")   # bilgisayara indirmek için # işaretini kaldırın`},
+ {k:"df.to_excel(filename)", tr:"Excel dosyasına yazar.", en:"Writes to an Excel file",
+  kod:`with pd.ExcelWriter("ik_rapor.xlsx") as yazici:
+    df.to_excel(yazici, sheet_name="Calisanlar", index=False)
+    df.groupby("departman")["maas"].mean().round().to_excel(yazici, sheet_name="Ort_Maas")
+print(pd.ExcelFile("ik_rapor.xlsx").sheet_names)
+# indir("ik_rapor.xlsx")`},
+ {k:"df.to_sql(table_name, connection_object)", tr:"SQL tablosuna yazar.", en:"Writes to a SQL table",
+  kod:`con = sqlite3.connect("ik.db")
+df[df["performans"] >= 4].to_sql("yuksek_performans", con, index=False, if_exists="replace")
+pd.read_sql("SELECT COUNT(*) AS kayit FROM yuksek_performans", con)`},
+ {k:"df.to_json(filename)", tr:"JSON biçiminde dosyaya yazar.", en:"Writes to a file in JSON format",
+  kod:`df.head(2).to_json("ihrac.json", orient="records", force_ascii=False, indent=2)
+print(open("ihrac.json", encoding="utf-8").read())`},
+ {k:"df.to_html(filename)", tr:"HTML tablosu olarak kaydeder.", en:"Saves as an HTML table",
+  kod:`df.head(3).to_html("ihrac.html", index=False)
+print(open("ihrac.html", encoding="utf-8").read()[:450])`},
+ {k:"df.to_clipboard()", tr:"Panoya yazar (Excel'e yapıştırılabilir).", en:"Writes to the clipboard",
+  kod:`# Tarayıcı karşılığı: pano_kopyala() yardımcı fonksiyonu
+pano_kopyala(df.head(10))
+# Şimdi Excel'e Ctrl+V ile yapıştırabilirsiniz`,
+  not:"Pyodide'de df.to_clipboard() çalışmaz; bu sayfadaki pano_kopyala() tabloyu sekmeli metin olarak panoya kopyalar."},
+]},
+{ id:"test", baslik:"Test nesneleri oluşturma", en:"Create test objects", ac:"Denemeler için kullanışlıdır.", ogeler:[
+ {k:"pd.DataFrame(np.random.rand(20,5))", tr:"20 satır ve 5 sütundan oluşan rastgele ondalıklı sayı tablosu üretir.", en:"5 columns and 20 rows of random floats",
+  kod:`memnuniyet = pd.DataFrame(np.random.rand(20, 5),
+                          columns=["ucret", "yan_hak", "yonetici", "ekip", "gelisim"])
+memnuniyet.round(2).head()`},
+ {k:"pd.Series(my_list)", tr:"Bir listeden (iterable) seri oluşturur.", en:"Creates a series from an iterable my_list",
+  kod:`ise_alim_suresi = [21, 34, 18, 45, 27]
+pd.Series(ise_alim_suresi, name="ise_alim_gun")`},
+ {k:"df.index = pd.date_range('1900/1/30', periods=df.shape[0])", tr:"Tabloya tarih indeksi ekler.", en:"Adds a date index",
+  kod:`aylik = pd.DataFrame({"ise_alim": [12, 15, 9, 20, 14, 11],
+                      "ayrilma":  [8, 6, 10, 7, 9, 5]})
+aylik.index = pd.date_range("2025/1/1", periods=aylik.shape[0], freq="MS")
+aylik`},
+]},
+{ id:"viewing", baslik:"Veriyi görüntüleme ve inceleme", en:"Viewing / inspecting data", ac:"Yeni bir İK veri setini ilk kez açtığınızda.", ogeler:[
+ {k:"df.head(n)", tr:"İlk n satırı gösterir.", en:"First n rows of the DataFrame",
+  kod:`df.head(5)`},
+ {k:"df.tail(n)", tr:"Son n satırı gösterir.", en:"Last n rows of the DataFrame",
+  kod:`df.tail(3)`},
+ {k:"df.shape", tr:"Satır ve sütun sayısını verir.", en:"Number of rows and columns",
+  kod:`print("Çalışan sayısı:", df.shape[0], "| Değişken sayısı:", df.shape[1])
+df.shape`,
+  not:"Kopya kâğıdında df.shape() yazıyor; shape bir özniteliktir, parantez kullanılmaz (aksi hâlde TypeError)."},
+ {k:"df.info()", tr:"İndeks, veri tipi ve bellek bilgisini verir.", en:"Index, Datatype and Memory information",
+  kod:`df.info()`},
+ {k:"df.describe()", tr:"Sayısal sütunların özet istatistiklerini verir.", en:"Summary statistics for numerical columns",
+  kod:`df.describe().round(2)`},
+ {k:"s.value_counts(dropna=False)", tr:"Benzersiz değerleri ve frekanslarını gösterir; dropna=False ile eksikler de sayılır.", en:"Views unique values and counts",
+  kod:`df["sertifika"].value_counts(dropna=False)`},
+ {k:"df.apply(pd.Series.value_counts)", tr:"Tüm sütunlar için benzersiz değerleri ve sayıları verir.", en:"Unique values and counts for all columns",
+  kod:`df[["departman", "calisma_sekli"]].apply(pd.Series.value_counts).fillna(0).astype(int)`},
+]},
+{ id:"selection", baslik:"Seçim", en:"Selection", ac:"Sütun, satır ve hücre seçme.", ogeler:[
+ {k:"df[col]", tr:"col etiketli sütunu Series olarak döndürür.", en:"Returns column with label col as Series",
+  kod:`df["maas"].head()`},
+ {k:"df[[col1, col2]]", tr:"Sütunları yeni bir DataFrame olarak döndürür.", en:"Returns columns as a new DataFrame",
+  kod:`df[["sicil_no", "departman", "maas"]].head()`},
+ {k:"s.iloc[0]", tr:"Konuma (sıra numarasına) göre seçim.", en:"Selection by position",
+  kod:`sirali = s.sort_values()
+print("iloc[0] → konumu 0 olan (en düşük maaş):", sirali.iloc[0])`},
+ {k:"s.loc[0]", tr:"İndeks etiketine göre seçim.", en:"Selection by index",
+  kod:`sirali = s.sort_values()
+print("loc[0]  → etiketi 0 olan (S1000'ün maaşı):", sirali.loc[0])
+print("iloc[0] → ilk sıradaki:", sirali.iloc[0])`},
+ {k:"df.iloc[0,:]", tr:"İlk satır.", en:"First row",
+  kod:`df.iloc[0, :]`},
+ {k:"df.iloc[0,0]", tr:"İlk sütunun ilk elemanı.", en:"First element of first column",
+  kod:`df.iloc[0, 0]`},
+]},
+{ id:"cleaning", baslik:"Veri temizleme", en:"Data cleaning", ac:"Eksik değer, tip dönüşümü, yeniden adlandırma ve kod çözme.", ogeler:[
+ {k:"df.columns = ['a','b','c']", tr:"Sütunları yeniden adlandırır.", en:"Renames columns",
+  kod:`d = df[["sicil_no", "departman", "maas"]].copy()
+d.columns = ["id", "birim", "ucret"]
+d.head(3)`},
+ {k:"pd.isnull()", tr:"Eksik değerleri kontrol eder, Boolean dizi döndürür.", en:"Checks for null values, returns Boolean array",
+  kod:`print("Eksik maaş sayısı:", pd.isnull(df["maas"]).sum())
+pd.isnull(df).sum()`},
+ {k:"pd.notnull()", tr:"isnull()'ın tersi.", en:"Opposite of pd.isnull()",
+  kod:`df[pd.notnull(df["sertifika"])][["sicil_no", "departman", "sertifika"]].head()`},
+ {k:"df.dropna()", tr:"Eksik değer içeren tüm satırları atar.", en:"Drops all rows that contain null values",
+  kod:`temiz = df.dropna()
+print(df.shape, "→", temiz.shape)
+# sertifika sütunu çoğunlukla boş olduğu için satırların çoğu gider`},
+ {k:"df.dropna(axis=1)", tr:"Eksik değer içeren tüm sütunları atar.", en:"Drops all columns that contain null values",
+  kod:`print("Kalan sütunlar:", df.dropna(axis=1).columns.tolist())`},
+ {k:"df.dropna(axis=1,thresh=n)", tr:"Dolu (eksik olmayan) değer sayısı n'den az olan sütunları atar.", en:"Drops all columns that have less than n non null values",
+  kod:`print(df.notnull().sum())
+print("\\nthresh=150 sonrası:", df.dropna(axis=1, thresh=150).columns.tolist())`,
+  not:"Kopya kâğıdı \"satırları atar\" diyor; axis=1 olduğu için aslında sütunlar atılır."},
+ {k:"df.fillna(x)", tr:"Tüm eksik değerleri x ile değiştirir.", en:"Replaces all null values with x",
+  kod:`df["sertifika"].fillna("Yok").value_counts()`},
+ {k:"s.fillna(s.mean())", tr:"Eksik değerleri ortalamayla doldurur (ortalama yerine istatistik bölümündeki çoğu fonksiyon kullanılabilir).", en:"Replaces all null values with the mean",
+  kod:`dolu = s.fillna(s.mean())
+print("Eksik:", s.isnull().sum(), "→", dolu.isnull().sum())
+# İK'da daha doğru yaklaşım: departman medyanıyla doldurma
+dept_medyan = df.groupby("departman")["maas"].transform("median")
+s.fillna(dept_medyan).isnull().sum()`},
+ {k:"s.astype(float)", tr:"Serinin veri tipini float'a dönüştürür.", en:"Converts the datatype of the series to float",
+  kod:`print("Önce:", df["egitim_duzeyi"].dtype)
+print("Sonra:", df["egitim_duzeyi"].astype(float).dtype)`},
+ {k:"s.replace(1,'one')", tr:"1'e eşit tüm değerleri 'one' ile değiştirir.", en:"Replaces all values equal to 1 with 'one'",
+  kod:`df["egitim_duzeyi"].replace(1, "Lise").value_counts()`},
+ {k:"s.replace([1,3],['one','three'])", tr:"1'leri 'one', 3'leri 'three' ile değiştirir.", en:"Replaces all 1 with 'one' and 3 with 'three'",
+  kod:`df["egitim_duzeyi"].replace([1, 2, 3, 4],
+                           ["Lise", "Lisans", "Yüksek lisans", "Doktora"]).value_counts()`},
+ {k:"df.rename(columns=lambda x: x + 1)", tr:"Sütunları toplu olarak yeniden adlandırır.", en:"Mass renaming of columns",
+  kod:`df.rename(columns=lambda x: x.upper()).head(2)`,
+  not:"x + 1 yalnızca sütun adları sayıysa çalışır; metin sütun adlarında x.upper() ya da \"ik_\" + x gibi bir fonksiyon kullanın."},
+ {k:"df.rename(columns={'old_name': 'new_name'})", tr:"Seçili sütunları yeniden adlandırır.", en:"Selective renaming",
+  kod:`df.rename(columns={"maas": "aylik_brut_ucret", "kidem": "kidem_yil"}).head(2)`},
+ {k:"df.set_index('column_one')", tr:"İndeksi değiştirir.", en:"Changes the index",
+  kod:`df.set_index("sicil_no").head(3)`},
+ {k:"df.rename(index=lambda x: x + 1)", tr:"İndeksi toplu olarak yeniden adlandırır.", en:"Mass renaming of index",
+  kod:`df.head(3).rename(index=lambda x: x + 1)`},
+]},
+{ id:"filter", baslik:"Filtreleme, sıralama ve gruplama", en:"Filter, sort & groupby", ac:"İK analitiğinin temel işlemleri.", ogeler:[
+ {k:"df[df[col] > 0.5]", tr:"col sütunu 0.5'ten büyük olan satırlar.", en:"Rows where the col column is greater than 0.5",
+  kod:`yuksek = df[df["performans"] > 4]
+print(len(yuksek), "yüksek performanslı çalışan")
+yuksek.head()`},
+ {k:"df[(df[col] > 0.5) & (df[col] < 0.7)]", tr:"0.5 < col < 0.7 olan satırlar (koşullar & ile birleştirilir, her biri parantez içinde).", en:"Rows where 0.7 > col > 0.5",
+  kod:`orta_kidem = df[(df["kidem"] > 5) & (df["kidem"] < 10)]
+print(len(orta_kidem), "çalışanın kıdemi 5-10 yıl arası")
+orta_kidem.head()`},
+ {k:"df.sort_values(col1)", tr:"col1'e göre artan sıralar.", en:"Sorts values by col1 in ascending order",
+  kod:`df.sort_values("maas").head()`},
+ {k:"df.sort_values(col2,ascending=False)", tr:"col2'ye göre azalan sıralar.", en:"Sorts values by col2 in descending order",
+  kod:`df.sort_values("performans", ascending=False).head()`},
+ {k:"df.sort_values([col1,col2],ascending=[True,False])", tr:"Önce col1'e göre artan, sonra col2'ye göre azalan sıralar.", en:"Sorts by col1 ascending then col2 descending",
+  kod:`df.sort_values(["departman", "maas"], ascending=[True, False]).head(8)`},
+ {k:"df.groupby(col)", tr:"Bir sütunun değerlerine göre groupby nesnesi döndürür.", en:"Returns a groupby object for values from one column",
+  kod:`g = df.groupby("departman")
+print(type(g))
+g.size()`},
+ {k:"df.groupby([col1,col2])", tr:"Birden çok sütunun değerlerine göre groupby nesnesi döndürür.", en:"Returns a groupby object values from multiple columns",
+  kod:`df.groupby(["departman", "calisma_sekli"]).size().unstack(fill_value=0)`},
+ {k:"df.groupby(col1)[col2].mean()", tr:"col1 gruplarına göre col2'nin ortalamasını verir (mean yerine istatistik fonksiyonlarının çoğu kullanılabilir).", en:"Returns the mean of the values in col2, grouped by the values in col1",
+  kod:`df.groupby("departman")["maas"].mean().round(0).sort_values(ascending=False)`},
+ {k:"df.pivot_table(index=col1,values=[col2,col3],aggfunc=mean)", tr:"col1'e göre gruplayıp col2 ve col3'ün ortalamasını hesaplayan pivot tablo oluşturur.", en:"Creates a pivot table that groups by col1 and calculates the mean of col2 and col3",
+  kod:`df.pivot_table(index="departman", values=["maas", "performans"], aggfunc="mean").round(2)`},
+ {k:"df.groupby(col1).agg(np.mean)", tr:"Her col1 grubu için tüm sütunların ortalamasını bulur.", en:"Finds the average across all columns for every unique col1 group",
+  kod:`df.groupby("departman")[["yas", "kidem", "maas", "performans"]].agg("mean").round(2)`,
+  not:"pandas 2.x'te agg(np.mean) uyarı verir ve metin sütunlarında hata alınır; agg(\"mean\") ve sayısal sütun seçimi önerilir."},
+ {k:"df.apply(np.mean)", tr:"Bir fonksiyonu her sütuna uygular.", en:"Applies a function across each column",
+  kod:`df[["yas", "kidem", "maas", "performans"]].apply(np.mean).round(2)`},
+ {k:"df.apply(np.max, axis=1)", tr:"Bir fonksiyonu her satıra uygular.", en:"Applies a function across each row",
+  kod:`ceyrek = pd.DataFrame(np.random.uniform(2, 5, (6, 4)).round(1),
+                      columns=["Ç1", "Ç2", "Ç3", "Ç4"],
+                      index=df["sicil_no"].head(6))
+ceyrek["en_iyi_ceyrek"] = ceyrek.apply(np.max, axis=1)
+ceyrek`},
+]},
+{ id:"join", baslik:"Birleştirme", en:"Join / combine", ac:"Tabloları alt alta, yan yana ya da anahtarla birleştirme.", ogeler:[
+ {k:"df1.append(df2)", tr:"df2'nin satırlarını df1'in sonuna ekler (sütunlar aynı olmalı).", en:"Adds the rows in df1 to the end of df2",
+  kod:`# append pandas 2.0'da kaldırıldı; karşılığı:
+pd.concat([df1, df2])`,
+  not:"DataFrame.append() pandas 2.0 ile kaldırıldı; pd.concat([df1, df2]) kullanın."},
+ {k:"pd.concat([df1, df2],axis=1)", tr:"df2'nin sütunlarını df1'in yanına ekler (satırlar aynı olmalı).", en:"Adds the columns in df1 to the end of df2",
+  kod:`ek = df[["performans", "egitim_saati"]].iloc[:5]
+pd.concat([df1, ek], axis=1)`},
+ {k:"df1.join(df2,on=col1,how='inner')", tr:"SQL tarzı birleştirme: df1'in col1 değerleri df2'nin indeksiyle eşleşir. how: 'left', 'right', 'outer', 'inner'.", en:"SQL-style joins the columns in df1 with the columns on df2",
+  kod:`df[["sicil_no", "departman", "maas"]].join(departman_df, on="departman", how="inner").head()`},
+]},
+{ id:"stats", baslik:"İstatistikler", en:"Statistics", ac:"Bunların hepsi bir seriye de uygulanabilir.", ogeler:[
+ {k:"df.describe()", tr:"Sayısal sütunların özet istatistikleri (burada tek seri için).", en:"Summary statistics for numerical columns",
+  kod:`df["maas"].describe().round(0)`},
+ {k:"df.mean()", tr:"Tüm sütunların ortalamasını döndürür.", en:"Returns the mean of all columns",
+  kod:`df.mean(numeric_only=True).round(2)`,
+  not:"pandas 2.x'te metin sütunları varsa numeric_only=True gerekir."},
+ {k:"df.corr()", tr:"Sütunlar arasındaki korelasyonu döndürür.", en:"Returns the correlation between columns",
+  kod:`df.corr(numeric_only=True).round(2)`},
+ {k:"df.count()", tr:"Her sütundaki eksik olmayan değer sayısını döndürür.", en:"Returns the number of non-null values in each column",
+  kod:`df.count()`},
+ {k:"df.max()", tr:"Her sütundaki en yüksek değeri döndürür.", en:"Returns the highest value in each column",
+  kod:`sayisal.max()`},
+ {k:"df.min()", tr:"Her sütundaki en düşük değeri döndürür.", en:"Returns the lowest value in each column",
+  kod:`sayisal.min()`},
+ {k:"df.median()", tr:"Her sütunun medyanını döndürür.", en:"Returns the median of each column",
+  kod:`sayisal.median()`},
+ {k:"df.std()", tr:"Her sütunun standart sapmasını döndürür.", en:"Returns the standard deviation of each column",
+  kod:`sayisal.std().round(2)`},
+]},
+];
+</script>
+
+<!-- =============== ARAYÜZ VE MOTOR =============== -->
+<script>
+let pyodide = null, hazir = false, ns = null;
+const kartlar = [];          // {el, bolum, metin, hucre}
+let aktifBolum = "hepsi";
+
+const durum = (y, c) => { document.getElementById("durumYazi").textContent = y;
+  document.getElementById("durumNokta").className = "nokta" + (c ? " " + c : ""); };
+const kac = t => t.replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]));
+const norm = t => t.toLocaleLowerCase("tr").normalize("NFD").replace(/[̀-ͯ]/g, "")
+  .replace(/ı/g, "i").replace(/[^a-z0-9_.\[\]()=,' ]/g, " ");
+
+// Türkçe eş anlamlı genişletme (arama için)
+const ESANLAM = {
+  "eksik":"null nan isnull notnull dropna fillna missing", "bos":"null nan dropna fillna",
+  "grupla":"groupby pivot agg", "gruplama":"groupby pivot agg", "sirala":"sort_values sort", "siralama":"sort_values",
+  "birlestir":"join concat append merge", "ortalama":"mean", "medyan":"median", "standart":"std",
+  "korelasyon":"corr", "say":"count value_counts", "frekans":"value_counts", "filtre":"df[df", "sec":"iloc loc selection",
+  "secim":"iloc loc", "oku":"read_", "yaz":"to_", "kaydet":"to_", "disa":"to_", "ice":"read_ import",
+  "yeniden adlandir":"rename columns", "tip":"astype dtype", "degistir":"replace", "indeks":"index set_index",
+  "satir":"row iloc axis", "sutun":"column columns", "ozet":"describe info", "tarih":"date_range", "pano":"clipboard",
+  "en yuksek":"max", "en dusuk":"min", "maas":"maas", "excel":"excel xlsx"
+};
+
+function kartOlustur(o, bolum) {
+  const el = document.createElement("div");
+  el.className = "kart";
+  el.innerHTML = `<div class="kart-bas"><span class="komut"></span></div>
+    <div class="aciklama"></div><div class="ingilizce">${kac(o.en)}</div>
+    ${o.not ? `<div class="uyari">⚠ ${kac(o.not)}</div>` : ""}<div class="hucre-yer"></div>`;
+  el.querySelector(".komut").textContent = o.k;
+  el.querySelector(".aciklama").textContent = o.tr;
+  const hucre = hucreOlustur(el.querySelector(".hucre-yer"), o.kod);
+  const metin = norm([o.k, o.tr, o.en, o.not || "", o.kod, bolum.baslik, bolum.en].join(" "));
+  kartlar.push({el, bolum: bolum.id, metin, hucre, o});
+  return el;
+}
+
+function hucreOlustur(yer, kod) {
+  yer.innerHTML = `<div class="hucre"><div class="hucre-ust"><span>Python</span>
+    <div class="btns"><button class="kopyala" title="Kodu kopyala">⧉</button><button class="sifirla">↺</button>
+    <button class="calistir" ${hazir ? "" : "disabled"}>▶ Çalıştır</button></div></div>
+    <textarea class="kod" spellcheck="false"></textarea></div><div class="cikti"></div>`;
+  const ta = yer.querySelector("textarea"), cikti = yer.querySelector(".cikti");
+  ta.value = kod;
+  const boyutla = () => { ta.style.height = "auto"; ta.style.height = (ta.scrollHeight + 4) + "px"; };
+  ta.addEventListener("input", boyutla); requestAnimationFrame(boyutla);
+  ta.addEventListener("keydown", e => {
+    if (e.key === "Tab") { e.preventDefault(); const p = ta.selectionStart;
+      ta.value = ta.value.slice(0, p) + "    " + ta.value.slice(ta.selectionEnd); ta.selectionStart = ta.selectionEnd = p + 4; }
+    if ((e.ctrlKey || e.shiftKey) && e.key === "Enter") { e.preventDefault(); h.calistir(); }
+  });
+  const h = { ta, cikti, btn: yer.querySelector(".calistir"), boyutla,
+    calistir: () => calistir(h) };
+  h.btn.onclick = h.calistir;
+  yer.querySelector(".sifirla").onclick = () => { ta.value = kod; boyutla(); cikti.innerHTML = ""; };
+  yer.querySelector(".kopyala").onclick = () => navigator.clipboard?.writeText(ta.value);
+  return h;
+}
+
+// Sayfayı kur
+const kapsayici = document.getElementById("bolumler");
+const toc = document.getElementById("icindekiler");
+const cipler = document.getElementById("cipler");
+cipler.innerHTML = `<span class="cip aktif" data-b="hepsi">Tümü<span class="say"></span></span>`;
+BOLUMLER.forEach((b, i) => {
+  const sec = document.createElement("div");
+  sec.className = "bolum"; sec.id = "b-" + b.id;
+  sec.innerHTML = `<h2>${i + 1}. ${kac(b.baslik)} <span style="font-weight:400;color:#9ca3af;font-size:.85rem">· ${kac(b.en)}</span></h2>
+    <div class="bolum-ac">${kac(b.ac)}</div>`;
+  b.ogeler.forEach(o => sec.appendChild(kartOlustur(o, b)));
+  kapsayici.appendChild(sec);
+  toc.insertAdjacentHTML("beforeend", `<a href="#b-${b.id}" data-b="${b.id}">${i + 1}. ${kac(b.baslik)}<span class="say"></span></a>`);
+  cipler.insertAdjacentHTML("beforeend", `<span class="cip" data-b="${b.id}">${kac(b.baslik)}<span class="say"></span></span>`);
+});
+const kurulumHucre = hucreOlustur(document.getElementById("kurulumHucre"),
+  document.getElementById("kurulumKod").textContent.replace(/^\n/, "").replace(/\s+$/, ""));
+
+// Arama
+function vurgula(metin, terimler) {
+  let h = kac(metin);
+  if (!terimler.length) return h;
+  // Aksan duyarsız vurgulama: normalize edilmiş metinde konum bul, orijinalde işaretle
+  const n = metin.toLocaleLowerCase("tr").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/ı/g, "i");
+  if (n.length !== metin.length) return h;
+  const isaret = new Array(metin.length).fill(false);
+  terimler.forEach(t => { let i = n.indexOf(t); while (t && i > -1) { for (let j = i; j < i + t.length; j++) isaret[j] = true; i = n.indexOf(t, i + 1); } });
+  let s = "", acik = false;
+  for (let i = 0; i < metin.length; i++) {
+    if (isaret[i] && !acik) { s += "<mark>"; acik = true; }
+    if (!isaret[i] && acik) { s += "</mark>"; acik = false; }
+    s += kac(metin[i]);
+  }
+  return s + (acik ? "</mark>" : "");
+}
+
+function ara() {
+  const q = norm(document.getElementById("ara").value).trim();
+  const terimler = q ? q.split(/\s+/).filter(Boolean) : [];
+  let gorunen = 0; const sayac = {};
+  kartlar.forEach(k => {
+    const eslesir = terimler.every(t => {
+      if (k.metin.includes(t)) return true;
+      const ek = Object.entries(ESANLAM).find(([a]) => a.startsWith(t) || t.startsWith(a));
+      return ek ? ek[1].split(" ").some(e => k.metin.includes(norm(e).trim())) : false;
+    });
+    const bolumOk = aktifBolum === "hepsi" || k.bolum === aktifBolum;
+    const goster = eslesir && bolumOk;
+    k.el.style.display = goster ? "" : "none";
+    if (eslesir) sayac[k.bolum] = (sayac[k.bolum] || 0) + 1;
+    if (goster) gorunen++;
+    k.el.querySelector(".komut").innerHTML = vurgula(k.o.k, terimler);
+    k.el.querySelector(".aciklama").innerHTML = vurgula(k.o.tr, terimler);
+  });
+  BOLUMLER.forEach(b => {
+    const say = sayac[b.id] || 0;
+    const vis = say > 0 && (aktifBolum === "hepsi" || aktifBolum === b.id);
+    document.getElementById("b-" + b.id).style.display = vis ? "" : "none";
+    const a = toc.querySelector(`[data-b="${b.id}"]`);
+    a.querySelector(".say").textContent = say; a.classList.toggle("bos", !say);
+    cipler.querySelector(`[data-b="${b.id}"] .say`).textContent = say;
+  });
+  const toplam = Object.values(sayac).reduce((a, b) => a + b, 0);
+  cipler.querySelector(`[data-b="hepsi"] .say`).textContent = toplam;
+  document.getElementById("b-veri").style.display = (terimler.length || aktifBolum !== "hepsi") ? "none" : "";
+  document.getElementById("bulunamadi").style.display = gorunen ? "none" : "block";
+  document.getElementById("sonucSayisi").textContent = terimler.length || aktifBolum !== "hepsi"
+    ? `${gorunen} komut gösteriliyor` : `${kartlar.length} komut`;
+}
+document.getElementById("ara").addEventListener("input", ara);
+document.addEventListener("keydown", e => {
+  if (e.key === "/" && document.activeElement.tagName !== "TEXTAREA" && document.activeElement.tagName !== "INPUT") {
+    e.preventDefault(); document.getElementById("ara").focus(); }
+  if (e.key === "Escape" && document.activeElement.id === "ara") { e.target.value = ""; ara(); }
+});
+cipler.addEventListener("click", e => {
+  const c = e.target.closest(".cip"); if (!c) return;
+  aktifBolum = c.dataset.b;
+  cipler.querySelectorAll(".cip").forEach(x => x.classList.toggle("aktif", x === c));
+  ara(); window.scrollTo({top: document.querySelector(".yerlesim").offsetTop - 130, behavior: "smooth"});
+});
+document.querySelectorAll(".oneriler a").forEach(a => a.onclick = () => {
+  document.getElementById("ara").value = a.dataset.q; ara(); });
+ara();
+
+// ---------- Python motoru ----------
+const PY_MOTOR = `
+import sys, io, ast, traceback, json, warnings
+import js
+import pandas as pd
+warnings.filterwarnings("ignore", category=FutureWarning)
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+pd.set_option("display.width", 140)
+
+def indir(dosya):
+    js.indirDosya(dosya)
+    print("İndiriliyor:", dosya)
+
+def pano_kopyala(tablo):
+    metin = tablo.to_csv(sep="\\t", index=False) if hasattr(tablo, "to_csv") else str(tablo)
+    js.panoyaYaz(metin)
+    print(f"{len(tablo)} satır panoya kopyalandı (sekmeyle ayrılmış).")
+
+def _yeni_ns():
+    return {"indir": indir, "pano_kopyala": pano_kopyala}
+
+def _html(sonuc):
+    if isinstance(sonuc, pd.Series):
+        sonuc = sonuc.to_frame()
+    return sonuc.to_html(max_rows=20, max_cols=14, border=0, na_rep="NaN"), f"{sonuc.shape[0]} satır × {sonuc.shape[1]} sütun"
+
+def _calistir(kod, g):
+    tampon = io.StringIO()
+    eski = sys.stdout, sys.stderr
+    sys.stdout = sys.stderr = tampon
+    html = boyut = hata = None
+    try:
+        agac = ast.parse(kod)
+        son = None
+        if agac.body and isinstance(agac.body[-1], ast.Expr):
+            son = ast.Expression(agac.body.pop().value)
+        exec(compile(agac, "<hücre>", "exec"), g)
+        if son is not None:
+            sonuc = eval(compile(son, "<hücre>", "eval"), g)
+            if isinstance(sonuc, (pd.DataFrame, pd.Series)):
+                html, boyut = _html(sonuc)
+            elif sonuc is not None:
+                print(repr(sonuc))
+    except Exception:
+        hata = traceback.format_exc(limit=-2)
+    finally:
+        sys.stdout, sys.stderr = eski
+    return json.dumps({"cikti": tampon.getvalue(), "html": html, "boyut": boyut, "hata": hata})
+`;
+
+window.indirDosya = ad => {
+  const veri = pyodide.FS.readFile(ad);
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([veri]));
+  a.download = ad.split("/").pop(); a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+};
+window.panoyaYaz = metin => navigator.clipboard?.writeText(metin).catch(() => {});
+
+function calistir(h) {
+  if (!hazir) return;
+  h.btn.disabled = true; h.btn.textContent = "⏳";
+  h.cikti.innerHTML = "";
+  try {
+    const r = JSON.parse(pyodide.globals.get("_calistir")(h.ta.value, ns));
+    if (r.cikti) { const p = document.createElement("pre"); p.textContent = r.cikti; h.cikti.appendChild(p); }
+    if (r.html) { h.cikti.insertAdjacentHTML("beforeend",
+      `<div class="tablo-sar">${r.html}</div><div class="boyut">${r.boyut}</div>`); }
+    if (r.hata) { const p = document.createElement("pre"); p.className = "hata"; p.textContent = r.hata; h.cikti.appendChild(p); }
+  } catch (e) { h.cikti.innerHTML = `<pre class="hata">${kac(String(e))}</pre>`; }
+  h.btn.disabled = false; h.btn.textContent = "▶ Çalıştır";
+}
+
+const bekle = () => new Promise(r => setTimeout(r, 15));
+
+async function baslat() {
+  try {
+    durum("Pyodide yükleniyor…");
+    pyodide = await loadPyodide();
+    durum("pandas, openpyxl, lxml, sqlite3 yükleniyor…");
+    await pyodide.loadPackage(["numpy", "pandas", "micropip"]);
+    // İsteğe bağlı paketler: biri yüklenemezse sayfa yine çalışır
+    const eksikler = [];
+    for (const pk of ["lxml", "sqlite3"]) {
+      try { await pyodide.loadPackage(pk); } catch (e) { eksikler.push(pk); }
+    }
+    durum("openpyxl kuruluyor (Excel desteği)…");
+    try {
+      await pyodide.runPythonAsync(`import micropip\nawait micropip.install("openpyxl")`);
+    } catch (e) { eksikler.push("openpyxl"); }
+    if (eksikler.length) console.warn("Yüklenemeyen paketler:", eksikler);
+    pyodide.runPython(PY_MOTOR);
+    ns = pyodide.globals.get("_yeni_ns")();
+    hazir = true;
+    document.querySelectorAll(".calistir").forEach(b => b.disabled = false);
+    ["veriSifirla", "gorunenleriCalistir"].forEach(id => document.getElementById(id).disabled = false);
+    calistir(kurulumHucre);
+    durum("Hazır: veri setleri yüklendi", "hazir");
+  } catch (e) { durum("Yükleme hatası: " + e.message, "hata"); console.error(e); }
+}
+
+document.getElementById("veriSifirla").onclick = () => { calistir(kurulumHucre); durum("Veri sıfırlandı", "hazir"); };
+document.getElementById("gorunenleriCalistir").onclick = async () => {
+  for (const k of kartlar) if (k.el.style.display !== "none" && k.el.closest(".bolum").style.display !== "none") {
+    calistir(k.hucre); await bekle(); }
+};
+
+baslat();
+</script>
+<script>
+(function(){const q=new URLSearchParams(location.search).get("q");
+if(q){const a=document.getElementById("ara");a.value=q;a.dispatchEvent(new Event("input"));}})();
+</script>
+</body>
+</html>

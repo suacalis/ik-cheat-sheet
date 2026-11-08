@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>matplotlib ile İK Veri Görselleştirme · Aranabilir Etkileşimli Kopya Kâğıdı</title>
+<script src="https://cdn.jsdelivr.net/pyodide/v0.27.7/full/pyodide.js"></script>
+<style>
+  :root{
+    --bg:#f5f6fa; --card:#fff; --ink:#1f2937; --muted:#6b7280; --line:#e5e7eb;
+    --accent:#d9480f; --accent-d:#a33a0c; --accent-l:#fff0e6;
+    --code:#0b1220; --codeink:#e5e7eb; --warn:#fff7e6; --warnb:#f59e0b; --err:#b91c1c;
+  }
+  *{box-sizing:border-box}
+  html{scroll-padding-top:150px}
+  body{margin:0;font-family:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);line-height:1.55}
+  header{background:linear-gradient(120deg,var(--accent-d),var(--accent));color:#fff;padding:26px 24px 18px}
+  header h1{margin:0 0 4px;font-size:1.65rem}
+  header p{margin:0;opacity:.92;max-width:980px;font-size:.96rem}
+  .durum{margin-top:12px;display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.16);padding:5px 12px;border-radius:999px;font-size:.88rem}
+  .nokta{width:10px;height:10px;border-radius:50%;background:#fbbf24;animation:nabiz 1s infinite}
+  .nokta.hazir{background:#4ade80;animation:none} .nokta.hata{background:#f87171;animation:none}
+  @keyframes nabiz{50%{opacity:.3}}
+  .ara-kutu{position:sticky;top:0;z-index:20;background:rgba(245,246,250,.96);backdrop-filter:blur(6px);border-bottom:1px solid var(--line);padding:12px 24px}
+  .ara-ic{max-width:1300px;margin:0 auto}
+  .ara-satir{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  #ara{flex:1;min-width:260px;font-size:1rem;padding:11px 14px 11px 40px;border:2px solid #cfd8dc;border-radius:10px;outline:none;
+       background:#fff url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="%236b7280" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>') no-repeat 13px center}
+  #ara:focus{border-color:var(--accent)}
+  #sonucSayisi{font-size:.9rem;color:var(--muted);min-width:120px}
+  .btn{border:0;border-radius:8px;padding:9px 14px;font-size:.88rem;cursor:pointer;font-weight:600;background:var(--accent);color:#fff}
+  .btn.ikincil{background:#fff;color:var(--accent);border:1px solid var(--accent)}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .cipler{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
+  .cip{border:1px solid #cfd8dc;background:#fff;border-radius:999px;padding:3px 11px;font-size:.8rem;cursor:pointer;color:#374151}
+  .cip.aktif{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .cip .say{opacity:.7;margin-left:3px}
+  .oneriler{font-size:.8rem;color:var(--muted);margin-top:7px}
+  .oneriler a{color:var(--accent);cursor:pointer;margin-right:8px;text-decoration:underline dotted}
+  .yerlesim{display:grid;grid-template-columns:230px 1fr;gap:22px;max-width:1300px;margin:0 auto;padding:20px 24px}
+  nav{position:sticky;top:150px;align-self:start;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;max-height:calc(100vh - 170px);overflow:auto}
+  nav h3{margin:0 0 6px;font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+  nav a{display:flex;justify-content:space-between;gap:6px;padding:5px 8px;border-radius:6px;color:var(--ink);text-decoration:none;font-size:.88rem}
+  nav a:hover{background:var(--accent-l);color:var(--accent-d)}
+  nav a .say{color:var(--muted);font-size:.78rem}
+  nav a.bos{opacity:.35}
+  .bolum{margin-bottom:26px}
+  .bolum>h2{margin:0 0 4px;color:var(--accent-d);font-size:1.25rem;border-bottom:2px solid var(--accent-l);padding-bottom:4px}
+  .bolum>.bolum-ac{color:var(--muted);font-size:.9rem;margin:4px 0 10px}
+  .kart{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:12px}
+  .kart-bas{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap}
+  .komut{font-family:"JetBrains Mono","Fira Code",Consolas,monospace;font-size:.95rem;font-weight:700;color:var(--accent-d);background:var(--accent-l);padding:3px 8px;border-radius:6px;word-break:break-all;white-space:pre-wrap}
+  .aciklama{margin:7px 0 2px;font-size:.94rem}
+  .ingilizce{font-size:.8rem;color:var(--muted);font-style:italic}
+  .uyari{background:var(--warn);border-left:4px solid var(--warnb);padding:7px 11px;border-radius:6px;font-size:.86rem;margin:8px 0 2px}
+  mark{background:#fde68a;color:inherit;padding:0 1px;border-radius:2px}
+  .hucre{margin-top:10px;border:1px solid #1f2a44;border-radius:9px;overflow:hidden}
+  .hucre-ust{display:flex;justify-content:space-between;align-items:center;background:#16213a;color:#cbd5e1;padding:5px 9px;font-size:.78rem}
+  .hucre-ust .btns{display:flex;gap:6px}
+  .hucre-ust button{border:0;border-radius:6px;padding:4px 11px;font-size:.78rem;cursor:pointer;font-weight:600}
+  .calistir{background:#22c55e;color:#052e14} .calistir:disabled{background:#475569;color:#cbd5e1;cursor:not-allowed}
+  .sifirla,.kopyala{background:#334155;color:#e2e8f0}
+  textarea.kod{display:block;width:100%;min-height:60px;resize:vertical;border:0;outline:none;background:var(--code);color:var(--codeink);
+    font-family:"JetBrains Mono","Fira Code",Consolas,monospace;font-size:13px;line-height:1.5;padding:10px 12px;tab-size:4;white-space:pre;overflow-x:auto}
+  .cikti{border:1px solid var(--line);border-top:0;border-radius:0 0 9px 9px;margin-top:-3px;max-height:620px;overflow:auto}
+  .cikti:empty{display:none}
+  .cikti pre{margin:0;padding:9px 12px;font-size:12.5px;background:#f9fafb;white-space:pre-wrap}
+  .cikti pre.hata{color:var(--err);background:#fef2f2}
+  .cikti .tablo-sar,.cikti .html-sar{padding:8px 10px}
+  .cikti img{display:block;max-width:100%;height:auto;margin:8px auto;background:#fff}
+  .cikti .img-sar{position:relative;padding:4px 8px}
+  .cikti .img-sar a{position:absolute;right:12px;top:8px;font-size:11px;background:#fff;border:1px solid var(--line);border-radius:6px;padding:2px 7px;color:var(--accent-d);text-decoration:none}
+  table.dataframe{border-collapse:collapse;font-size:12.5px;font-family:Consolas,monospace}
+  table.dataframe th,table.dataframe td{border:1px solid #e5e7eb;padding:4px 8px;text-align:right;white-space:nowrap}
+  table.dataframe thead th{background:#f1f5f9;position:sticky;top:0}
+  table.dataframe tbody th{background:#f8fafc;text-align:left}
+  .boyut{font-size:11.5px;color:var(--muted);padding:0 10px 8px}
+  .veri-tablo{border-collapse:collapse;width:100%;font-size:.88rem;margin:6px 0}
+  .veri-tablo th,.veri-tablo td{border:1px solid var(--line);padding:5px 8px;text-align:left;vertical-align:top}
+  .veri-tablo th{background:#f3f4f6}
+  code{background:#eef2f7;padding:1px 5px;border-radius:4px;font-size:.88em}
+  /* regex vurgulama */
+  .rx-metin{font-family:Consolas,monospace;font-size:13.5px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:10px 12px;white-space:pre-wrap;line-height:1.9;word-break:break-word}
+  .rx-metin .es{background:#bfdbfe;border-bottom:2px solid #2563eb;border-radius:3px;padding:1px 0}
+  .rx-metin .es:nth-of-type(even){background:#bbf7d0;border-bottom-color:#16a34a}
+  .rx-metin .bos{display:inline-block;width:2px;height:1.1em;background:#dc2626;vertical-align:middle;margin:0 1px}
+  .rx-ozet{font-size:12.5px;color:var(--muted);margin:6px 2px}
+  .rx-tablo{border-collapse:collapse;font-size:12px;font-family:Consolas,monospace;margin-top:4px}
+  .rx-tablo th,.rx-tablo td{border:1px solid var(--line);padding:3px 7px;text-align:left}
+  .rx-tablo th{background:#f1f5f9}
+  .test-arac{display:grid;grid-template-columns:1fr 150px;gap:8px;margin:8px 0}
+  .test-arac input,.test-arac textarea{font-family:Consolas,monospace;font-size:14px;padding:9px 11px;border:2px solid #cfd8dc;border-radius:8px;outline:none;width:100%}
+  .test-arac textarea{grid-column:1/-1;min-height:110px;resize:vertical}
+  .bayraklar{display:flex;gap:12px;flex-wrap:wrap;font-size:.85rem;margin:2px 0 6px}
+  #bulunamadi{display:none;background:#fff;border:1px dashed #cbd5e1;border-radius:12px;padding:28px;text-align:center;color:var(--muted)}
+  footer{text-align:center;color:var(--muted);font-size:.83rem;padding:6px 0 30px}
+  @media (max-width:920px){.yerlesim{grid-template-columns:1fr} nav{display:none}}
+</style>
+</head>
+<body>
+<div id="jsYok" style="background:#fef3c7;border-bottom:2px solid #f59e0b;color:#78350f;padding:12px 20px;font:15px/1.5 system-ui,sans-serif">
+<b>⚠ Çalıştır düğmeleri görünmüyorsa:</b> Bu sayfa JavaScript ile çalışır; uygulamanın dosya önizleme penceresi betikleri çalıştırmaz.
+Dosyayı <b>indirip</b> bilgisayarınızda <b>Chrome, Edge veya Firefox</b> ile açın (çift tıklamak yeterli). İlk açılışta internet bağlantısı gerekir.</div>
+<script>document.getElementById("jsYok").remove()</script>
+<header>
+  <a href="index.html" style="color:#fff;opacity:.85;text-decoration:none;font-size:.88rem;display:inline-block;margin-bottom:6px">← Tüm kopya kâğıtları</a>
+  <h1>matplotlib ile İK Veri Görselleştirme</h1>
+  <p>Dataquest “matplotlib Cheat Sheet” kopya kâğıdındaki tüm komutlar insan kaynakları verisiyle yeniden yazıldı. Kodlar tarayıcıda <b>Pyodide</b> ile çalışır; grafikler doğrudan hücrenin altında çizilir ve PNG olarak indirilebilir.</p>
+  <div class="durum"><span class="nokta" id="durumNokta"></span><span id="durumYazi">Python ortamı yükleniyor…</span></div>
+</header>
+
+<div class="ara-kutu">
+  <div class="ara-ic">
+    <div class="ara-satir">
+      <input id="ara" type="search" placeholder="Ara: çizgi, histogram, gösterge, alt grafik, renk haritası, eksen etiketi…  ( / tuşu ile odaklan )" autocomplete="off">
+      <span id="sonucSayisi"></span>
+      <button class="btn ikincil" id="veriSifirla" disabled title="Veri setlerini ilk hâline döndürür">↺ Veriyi sıfırla</button>
+      <button class="btn" id="gorunenleriCalistir" disabled>▶ Görünenleri çalıştır</button>
+    </div>
+    <div class="cipler" id="cipler"></div>
+    <div class="oneriler">Örnek aramalar: <a data-q="çizgi">çizgi</a><a data-q="çubuk">çubuk</a><a data-q="histogram">histogram</a><a data-q="pasta">pasta</a><a data-q="gösterge">gösterge</a><a data-q="alt grafik">alt grafik</a><a data-q="renk">renk</a><a data-q="açıklama">açıklama</a><a data-q="kenar">kenar</a><a data-q="pandas">pandas</a></div>
+  </div>
+</div>
+
+<div class="yerlesim">
+  <nav><h3>Bölümler</h3><div id="icindekiler"></div></nav>
+  <main>
+    <div class="bolum" id="b-veri">
+      <h2>Kullanılan İK veri setleri</h2>
+      <p class="bolum-ac">Kopya kâğıdındaki hazır veri setleri (titanic, iris, tips) yerine aşağıdaki sentetik İK verileri kullanılıyor. Her hücre temiz bir grafik ortamıyla başlar.</p>
+<table class="veri-tablo">
+<tr><th>Nesne</th><th>Kopya kâğıdı karşılığı</th><th>İçerik</th></tr>
+<tr><td><code>calisanlar</code></td><td>titanic / iris / tips</td><td>300 çalışan: departman, cinsiyet, seviye (Uzman / Kıdemli Uzman / Yönetici), yaş, kıdem, maaş, performans, bağlılık, eğitim saati, devamsızlık, ayrıldı (Evet/Hayır), ayrildi_mi (1/0), yonetici_mi</td></tr>
+<tr><td><code>aylik</code></td><td>zaman serisi</td><td>2023–2025 aylık işe alım, ayrılma ve kadro</td></tr>
+<tr><td><code>anket</code></td><td>iris (geniş format)</td><td>120 yanıtlık memnuniyet anketi: ücret, yönetici, ekip, gelişim, iş-yaşam dengesi (1–5)</td></tr>
+<tr><td><code>memnuniyet</code></td><td>uniform_data</td><td>6 departman × 12 ay memnuniyet matrisi (0–1)</td></tr>
+<tr><td><code>egitim</code></td><td>data (x, y)</td><td>Eğitim saati (1–100) ve performans artışı</td></tr>
+<tr><td><code>ay_no</code>, <code>ise_alim_2025</code>, <code>ayrilma_2025</code>, <code>dept_sayilari</code></td><td>x_values, y_values</td><td>2025 ayları, aylık işe alım ve ayrılma sayıları, departman başına çalışan sayısı</td></tr></table>
+      <div class="kart"><div class="kart-bas"><span class="komut">Veri kurulumu</span></div>
+        <div class="aciklama">Sayfa açılınca otomatik çalışır. Düzenleyip yeniden çalıştırabilirsiniz.</div>
+        <div id="kurulumHucre"></div>
+      </div>
+    </div>
+    <div id="bolumler"></div>
+    <div id="bulunamadi">Aramanızla eşleşen komut bulunamadı. Daha kısa bir kelime ya da İngilizce karşılığını deneyin.</div>
+    <footer>Kaynak: Dataquest, <i>matplotlib Cheat Sheet</i> · Veriler sentetiktir, öğretim amaçlıdır · Pyodide + matplotlib</footer>
+  </main>
+</div>
+
+<script type="application/json" id="sayfaVerisi">{"bolumler": [{"id": "import", "baslik": "Kütüphaneleri içe aktarma", "en": "Importing libraries", "ac": "Not: Bu sayfada her hücre varsayılan matplotlib stiliyle başlar; stil komutlarının etkisi o hücrede görülür.", "ogeler": [{"k": "import matplotlib.pyplot as plt", "tr": "pyplot alt modülünü plt kısaltmasıyla içe aktarır.", "kod": "import matplotlib.pyplot as plt\nimport matplotlib\nprint(\"matplotlib sürümü:\", matplotlib.__version__)", "en": "Import the pyplot submodule using an alias"}, {"k": "import seaborn as sns\nsns.set_theme()", "tr": "seaborn'u içe aktarır ve varsayılan temasını uygular.", "kod": "import seaborn as sns\nsns.set_theme()\nplt.plot(ay_no, ise_alim_2025)", "en": "Import seaborn and set the default theme"}, {"k": "import pandas as pd", "tr": "pandas'ı alışılmış kısaltmasıyla içe aktarır.", "kod": "import pandas as pd\nprint(pd.__version__)", "en": "Import pandas using its common alias"}, {"k": "import matplotlib.style as style\nstyle.use('fivethirtyeight')", "tr": "Önceden tanımlı fivethirtyeight stilini uygular.", "kod": "import matplotlib.style as style\nstyle.use(\"fivethirtyeight\")\nplt.plot(ay_no, ise_alim_2025)\nplt.title(\"fivethirtyeight stili\")\nprint(\"Diğer stiller:\", style.available[:8], \"...\")", "en": "Apply the fivethirtyeight predefined style"}]}, {"id": "temel", "baslik": "matplotlib ile temel grafikler", "en": "Basic plotting with matplotlib", "ac": "Çizgi, saçılım, çubuk, histogram, alan ve pasta grafikleri.", "ogeler": [{"k": "plt.plot(x_values, y_values)\nplt.show()", "tr": "Temel çizgi grafiği çizer.", "kod": "plt.plot(ay_no, ise_alim_2025)\nplt.show()", "en": "Plot a basic line graph"}, {"k": "plt.plot(x_values, y_values, color='blue', linestyle='--')", "tr": "Çizgi rengini ve stilini özelleştirir.", "kod": "plt.plot(ay_no, ise_alim_2025, color=\"blue\", linestyle=\"--\")\nplt.show()", "en": "Customize line color and style"}, {"k": "plt.plot(x_values1, y_values1)\nplt.plot(x_values2, y_values2)\nplt.show()", "tr": "Aynı figürde birden çok grafik çizer.", "kod": "plt.plot(ay_no, ise_alim_2025)\nplt.plot(ay_no, ayrilma_2025)\nplt.show()", "en": "Plot multiple graphs on the same figure"}, {"k": "plt.plot(x_values1, y_values1)\nplt.show()\nplt.plot(x_values2, y_values2)\nplt.show()", "tr": "Grafikleri ayrı figürlerde çizer.", "kod": "plt.plot(ay_no, ise_alim_2025)\nplt.show()\nplt.plot(ay_no, ayrilma_2025, color=\"crimson\")\nplt.show()", "en": "Plot graphs in separate figures"}, {"k": "plt.scatter(x_values, y_values)", "tr": "Noktalardan saçılım grafiği oluşturur.", "kod": "plt.scatter(calisanlar[\"kidem\"], calisanlar[\"maas\"])\nplt.show()", "en": "Create a scatter plot of points"}, {"k": "plt.scatter(x_values, y_values, c='red', s=100)", "tr": "Nokta rengini ve boyutunu özelleştirir.", "kod": "plt.scatter(calisanlar[\"performans\"], calisanlar[\"baglilik\"], c=\"red\", s=100, alpha=.3)\nplt.show()", "en": "Customize point color and size"}, {"k": "plt.bar(x=x_values, height=heights)", "tr": "Dikey çubuk grafiği oluşturur.", "kod": "plt.bar(x=dept_sayilari.index, height=dept_sayilari.values)\nplt.xticks(rotation=30)\nplt.show()", "en": "Create a vertical bar chart"}, {"k": "plt.bar(x, height, bottom=previous_heights)", "tr": "Yığılmış çubuk grafiği oluşturur.", "kod": "tablo = pd.crosstab(calisanlar[\"departman\"], calisanlar[\"seviye\"])\nalt = np.zeros(len(tablo))\nfor seviye in [\"Uzman\", \"Kıdemli Uzman\", \"Yönetici\"]:\n    plt.bar(tablo.index, tablo[seviye], bottom=alt, label=seviye)\n    alt += tablo[seviye].to_numpy()\nplt.legend(); plt.xticks(rotation=30)\nplt.show()", "en": "Create a stacked bar chart"}, {"k": "plt.barh(y=y_values, width=widths)", "tr": "Yatay çubuk grafiği oluşturur.", "kod": "ort = calisanlar.groupby(\"departman\")[\"maas\"].mean().sort_values()\nplt.barh(y=ort.index, width=ort.values)\nplt.show()", "en": "Create a horizontal bar chart"}, {"k": "plt.barh(y, width, color='purple', edgecolor='black')", "tr": "Çubuk renklerini ve kenarlıklarını özelleştirir.", "kod": "ort = calisanlar.groupby(\"departman\")[\"baglilik\"].mean().sort_values()\nplt.barh(ort.index, ort.values, color=\"purple\", edgecolor=\"black\")\nplt.show()", "en": "Customize bar colors and borders"}, {"k": "plt.hist(data_column)", "tr": "Bir veri sütununun histogramını çizer.", "kod": "plt.hist(calisanlar[\"maas\"])\nplt.show()", "en": "Generate a histogram for a dataset"}, {"k": "plt.hist(data_column, bins=30, color='orange')", "tr": "Kutu sayısını ve rengi özelleştirir.", "kod": "plt.hist(calisanlar[\"maas\"], bins=30, color=\"orange\")\nplt.show()", "en": "Customize bin count and color"}, {"k": "plt.fill_between(x, y1=lower, y2=upper)", "tr": "y1 ile y2 arası gölgelendirilmiş alan grafiği oluşturur.", "kod": "plt.fill_between(ay_no, y1=ayrilma_2025, y2=ise_alim_2025, alpha=.4)\nplt.plot(ay_no, ise_alim_2025, label=\"İşe alım\")\nplt.plot(ay_no, ayrilma_2025, label=\"Ayrılma\")\nplt.legend()\nplt.show()", "en": "Create an area plot shaded between y1 and y2"}, {"k": "plt.pie(sizes, labels=labels, autopct='%1.1f%%')", "tr": "Yüzdeleri gösteren pasta grafiği oluşturur.", "kod": "plt.pie(dept_sayilari.values, labels=dept_sayilari.index, autopct=\"%1.1f%%\")\nplt.show()", "en": "Create a pie chart with percentages"}]}, {"id": "ozellestirme", "baslik": "Özelleştirme", "en": "Customization", "ac": "Başlık, eksen etiketleri, gösterge, ızgara, eksen işaretleri, renk haritası ve açıklama.", "ogeler": [{"k": "plt.title('Title')", "tr": "Grafiğe başlık ekler.", "kod": "plt.plot(ay_no, ise_alim_2025)\nplt.title(\"2025 Aylık İşe Alım\")", "en": "Add a title to the plot"}, {"k": "plt.title('Custom Title', fontsize=16, color='green')", "tr": "Başlığın boyutunu ve rengini özelleştirir.", "kod": "plt.plot(ay_no, ise_alim_2025)\nplt.title(\"2025 Aylık İşe Alım\", fontsize=16, color=\"green\")", "en": "Customize title size and color"}, {"k": "plt.xlabel('X-axis Label')", "tr": "x eksenine etiket ekler.", "kod": "plt.plot(ay_no, ise_alim_2025)\nplt.xlabel(\"Ay\")", "en": "Add a label to the x-axis"}, {"k": "plt.ylabel('Y-axis Label')", "tr": "y eksenine etiket ekler.", "kod": "plt.plot(ay_no, ise_alim_2025)\nplt.ylabel(\"İşe alınan kişi\")", "en": "Add a label to the y-axis"}, {"k": "plt.plot(..., label='Label 1')\nplt.legend()", "tr": "Grafiğe gösterge (lejant) ekler.", "kod": "plt.plot(ay_no, ise_alim_2025, label=\"İşe alım\")\nplt.plot(ay_no, ayrilma_2025, label=\"Ayrılma\")\nplt.legend()", "en": "Add a legend to the plot"}, {"k": "plt.legend(loc='upper right', fontsize=10)", "tr": "Göstergenin konumunu ve yazı boyutunu özelleştirir.", "kod": "plt.plot(ay_no, ise_alim_2025, label=\"İşe alım\")\nplt.plot(ay_no, ayrilma_2025, label=\"Ayrılma\")\nplt.legend(loc=\"upper right\", fontsize=10)", "en": "Customize legend position and font size"}, {"k": "plt.grid(True)", "tr": "Izgara çizgileri ekler.", "kod": "plt.plot(ay_no, ise_alim_2025)\nplt.grid(True)", "en": "Add gridlines to the plot"}, {"k": "plt.xticks(ticks=x_values, labels=labels)", "tr": "x ekseni işaret etiketlerini özelleştirir.", "kod": "aylar = [\"Oca\", \"Şub\", \"Mar\", \"Nis\", \"May\", \"Haz\", \"Tem\", \"Ağu\", \"Eyl\", \"Eki\", \"Kas\", \"Ara\"]\nplt.plot(ay_no, ise_alim_2025)\nplt.xticks(ticks=ay_no, labels=aylar)", "en": "Customize the tick labels on the x-axis"}, {"k": "plt.xticks(rotation=45)", "tr": "x ekseni etiketlerini döndürür.", "kod": "plt.bar(dept_sayilari.index, dept_sayilari.values)\nplt.xticks(rotation=45)", "en": "Rotate the x-axis tick labels"}, {"k": "plt.yticks(ticks=y_values, labels=labels)", "tr": "y ekseni işaret etiketlerini özelleştirir.", "kod": "plt.hist(calisanlar[\"performans\"], bins=15)\nplt.xticks([1, 2, 3, 4, 5], [\"Çok düşük\", \"Düşük\", \"Orta\", \"İyi\", \"Çok iyi\"])\nplt.yticks(ticks=[0, 20, 40, 60], labels=[\"0\", \"20 kişi\", \"40 kişi\", \"60 kişi\"])", "en": "Customize the tick labels on the y-axis"}, {"k": "plt.yticks(rotation=30)", "tr": "y ekseni etiketlerini döndürür.", "kod": "ort = calisanlar.groupby(\"departman\")[\"maas\"].mean()\nplt.barh(ort.index, ort.values)\nplt.yticks(rotation=30)", "en": "Rotate the y-axis tick labels"}, {"k": "plt.ticklabel_format(axis='both', style='plain')", "tr": "Bilimsel gösterimi düz sayıya çevirir.", "kod": "toplam_ucret = calisanlar.groupby(\"departman\")[\"maas\"].sum() * 12 * 100   # yıllık, 100 kat ölçek\nplt.plot(range(len(toplam_ucret)), toplam_ucret.values, marker=\"o\")\nplt.ticklabel_format(axis=\"both\", style=\"plain\")", "en": "Change scientific notation to plain text"}, {"k": "plt.scatter(x, y, c=values, cmap='viridis')\nplt.colorbar()", "tr": "Saçılım grafiğinde renk haritası kullanır.", "kod": "plt.scatter(calisanlar[\"kidem\"], calisanlar[\"maas\"], c=calisanlar[\"performans\"], cmap=\"viridis\")\nplt.colorbar(label=\"Performans\")", "en": "Use a colormap in the scatter plot"}, {"k": "plt.scatter(x, y, c=values, cmap='coolwarm')\nplt.colorbar()", "tr": "Farklı bir renk haritası kullanır.", "kod": "plt.scatter(calisanlar[\"baglilik\"], calisanlar[\"devamsizlik\"], c=calisanlar[\"baglilik\"], cmap=\"coolwarm\")\nplt.colorbar(label=\"Bağlılık\")", "en": "Use a different colormap"}, {"k": "plt.annotate('Text', xy=(x, y), xytext=(x_offset, y_offset), arrowprops=dict(facecolor='black', shrink=0.05))", "tr": "Grafiğe ok işaretli bir açıklama ekler.", "kod": "plt.plot(ay_no, ise_alim_2025, marker=\"o\")\nzirve = int(np.argmax(ise_alim_2025))\nplt.annotate(\"Yılın zirvesi\", xy=(ay_no[zirve], ise_alim_2025[zirve]),\n             xytext=(ay_no[zirve] + 1.5, ise_alim_2025[zirve] + 3),\n             arrowprops=dict(facecolor=\"black\", shrink=0.05))\nplt.ylim(0, ise_alim_2025.max() + 8)", "en": "Add text and an arrow annotation on the plot"}]}, {"id": "izgara", "baslik": "Izgara grafikler", "en": "Grid charts", "ac": "Birden çok grafiği tek figürde düzenleme.", "ogeler": [{"k": "plt.figure(figsize=(8, 3))\nplt.subplot(1, 2, 1)\nplt.subplot(1, 2, 2)", "tr": "1 satır, 2 sütunluk ızgarada iki alt grafik oluşturur.", "kod": "plt.figure(figsize=(8, 3))\nplt.subplot(1, 2, 1)\nplt.hist(calisanlar[\"yas\"], bins=15); plt.title(\"Yaş\")\nplt.subplot(1, 2, 2)\nplt.hist(calisanlar[\"kidem\"], bins=15, color=\"orange\"); plt.title(\"Kıdem\")\nplt.show()", "en": "Create two subplots in a 1-row, 2-column grid"}, {"k": "plt.figure(figsize=(10, 12))\nfor i in range(1, 7):\n    plt.subplot(3, 2, i)\n    plt.plot(x_values, y_values)", "tr": "3 satır, 2 sütunluk alt grafik ızgarası oluşturur.", "kod": "plt.figure(figsize=(10, 9))\nfor i, dept in enumerate(departmanlar, start=1):\n    plt.subplot(3, 2, i)\n    plt.hist(calisanlar.loc[calisanlar.departman == dept, \"maas\"], bins=12)\n    plt.title(dept, fontsize=10)\nplt.tight_layout()\nplt.show()", "en": "Create a 3-row, 2-column grid of subplots"}, {"k": "fig, axes = plt.subplots(nrows=4, ncols=1)", "tr": "Dikey olarak yığılmış 4 alt grafik oluşturur.", "kod": "fig, axes = plt.subplots(nrows=4, ncols=1, figsize=(7, 8), sharex=True)\nfor ax, sutun in zip(axes, [\"ise_alim\", \"ayrilma\", \"kadro\"]):\n    ax.plot(aylik[\"tarih\"], aylik[sutun]); ax.set_ylabel(sutun)\naxes[3].plot(aylik[\"tarih\"], aylik[\"ise_alim\"] - aylik[\"ayrilma\"]); axes[3].set_ylabel(\"net\")\nplt.show()", "en": "Create a grid of 4 vertically stacked subplots"}, {"k": "fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(10, 8))\naxes[0, 0].plot(...)\naxes[1, 1].plot(...)", "tr": "2x2 alt grafik ızgarası oluşturup grafikleri belirli eksenlere atar.", "kod": "fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(10, 7))\naxes[0, 0].plot(ay_no, ise_alim_2025); axes[0, 0].set_title(\"İşe alım\")\naxes[0, 1].hist(calisanlar[\"performans\"], bins=15); axes[0, 1].set_title(\"Performans\")\naxes[1, 0].scatter(calisanlar[\"kidem\"], calisanlar[\"maas\"], s=8); axes[1, 0].set_title(\"Kıdem-Maaş\")\naxes[1, 1].plot(ay_no, ayrilma_2025, color=\"crimson\"); axes[1, 1].set_title(\"Ayrılma\")\nplt.tight_layout()\nplt.show()", "en": "Create a 2x2 grid of subplots and assign plots to specific axes"}]}, {"id": "ileri", "baslik": "İleri düzey özelleştirme", "en": "Advanced plot customization", "ac": "Nesne yönelimli (fig, ax) yaklaşım.", "ogeler": [{"k": "fig, ax = plt.subplots(figsize=(10, 8))\nax.bar(x, height)", "tr": "Nesne yönelimli yaklaşımla çubuk grafiği oluşturur.", "kod": "fig, ax = plt.subplots(figsize=(8, 4))\nax.bar(dept_sayilari.index, dept_sayilari.values)\nax.set_title(\"Departman büyüklükleri\")\nplt.show()", "en": "Create a bar chart using the object-oriented approach"}, {"k": "for location in ['left', 'right', 'bottom', 'top']:\n    ax.spines[location].set_visible(False)", "tr": "Grafiğin tüm kenar çizgilerini (spines) kaldırır.", "kod": "fig, ax = plt.subplots()\nax.barh(dept_sayilari.index, dept_sayilari.values)\nfor location in [\"left\", \"right\", \"bottom\", \"top\"]:\n    ax.spines[location].set_visible(False)\nplt.show()", "en": "Remove all borders (spines) from the plot"}, {"k": "ax.tick_params(top=False, left=False)\nax.tick_params(axis='x', colors='grey')", "tr": "Belirli işaretleri gizler ve işaret renklerini değiştirir.", "kod": "fig, ax = plt.subplots()\nax.plot(ay_no, ise_alim_2025)\nax.tick_params(top=False, left=False)\nax.tick_params(axis=\"x\", colors=\"grey\")\nplt.show()", "en": "Hide specific ticks and change tick colors"}, {"k": "ax.xaxis.tick_top()", "tr": "x ekseni etiketlerini grafiğin üstüne taşır.", "kod": "fig, ax = plt.subplots()\nax.barh(dept_sayilari.index, dept_sayilari.values)\nax.xaxis.tick_top()\nplt.show()", "en": "Move x-tick labels to the top of the plot"}, {"k": "ax.set_xticks([0, 150, 300])", "tr": "x ekseninde özel işaret konumları belirler.", "kod": "fig, ax = plt.subplots()\nax.hist(calisanlar[\"egitim_saati\"].dropna(), bins=20)\nax.set_xticks([0, 30, 60, 90])\nplt.show()", "en": "Set custom tick locations on the x-axis"}, {"k": "ax.set_xticklabels(['0', '150', '300'])", "tr": "x ekseninde özel işaret etiketleri belirler.", "kod": "fig, ax = plt.subplots()\nax.hist(calisanlar[\"egitim_saati\"].dropna(), bins=20)\nax.set_xticks([0, 30, 60, 90])\nax.set_xticklabels([\"0 sa\", \"30 sa\", \"60 sa\", \"90 sa\"])\nplt.show()", "en": "Set custom tick labels on the x-axis"}, {"k": "ax.text(x, y, 'Sample Text', fontsize=12, color='blue')", "tr": "Grafikte belirli bir konuma metin ekler.", "kod": "fig, ax = plt.subplots()\nax.plot(ay_no, ise_alim_2025)\nax.text(2, ise_alim_2025.max(), \"Bahar işe alım dönemi\", fontsize=12, color=\"blue\")\nplt.show()", "en": "Add custom text to a specific position on the plot"}, {"k": "ax.axvline(x=5, color='red', linewidth=2)", "tr": "Belirli bir x konumuna dikey çizgi ekler.", "kod": "fig, ax = plt.subplots()\nax.hist(calisanlar[\"kidem\"], bins=20)\nax.axvline(x=calisanlar[\"kidem\"].median(), color=\"red\", linewidth=2, label=\"Medyan kıdem\")\nax.legend()\nplt.show()", "en": "Add a vertical line at a specified x-position"}, {"k": "ax.axhline(y=3, color='green', linestyle='--')", "tr": "Belirli bir y konumuna yatay çizgi ekler.", "kod": "fig, ax = plt.subplots()\nort = calisanlar.groupby(\"departman\")[\"performans\"].mean()\nax.bar(ort.index, ort.values)\nax.axhline(y=3, color=\"green\", linestyle=\"--\", label=\"Hedef: 3\")\nax.legend(); plt.xticks(rotation=30)\nplt.show()", "en": "Add a horizontal line at a specified y-position"}]}, {"id": "pandas", "baslik": "pandas ile görselleştirme", "en": "Pandas visualization", "ac": "Series ve DataFrame nesnelerinin .plot erişimcisi.", "ogeler": [{"k": "Series.plot.line()", "tr": "Bir Series'ten çizgi grafiği oluşturur.", "kod": "kadro = aylik.set_index(\"tarih\")[\"kadro\"]\nkadro.plot.line()\nplt.show()", "en": "Create a line plot from a Series object"}, {"k": "Series.plot.line(color='green', linestyle='--')", "tr": "Series çizgi grafiğini özelleştirir.", "kod": "kadro = aylik.set_index(\"tarih\")[\"kadro\"]\nkadro.plot.line(color=\"green\", linestyle=\"--\")\nplt.show()", "en": "Create a line plot from a Series object"}, {"k": "DataFrame.plot.line(x='column1', y='column2')", "tr": "DataFrame'den çizgi grafiği oluşturur.", "kod": "aylik.plot.line(x=\"tarih\", y=[\"ise_alim\", \"ayrilma\"])\nplt.show()", "en": "Create a line plot from a DataFrame object"}, {"k": "DataFrame.plot.scatter(x='column1', y='column2')", "tr": "DataFrame'den saçılım grafiği oluşturur.", "kod": "calisanlar.plot.scatter(x=\"kidem\", y=\"maas\")\nplt.show()", "en": "Create a scatter plot from a DataFrame object"}, {"k": "DataFrame.plot.scatter(x='col1', y='col2', color='red', s=50)", "tr": "Saçılım noktalarını özelleştirir.", "kod": "calisanlar.plot.scatter(x=\"baglilik\", y=\"devamsizlik\", color=\"red\", s=50, alpha=.3)\nplt.show()", "en": "Customize scatter plot points"}, {"k": "Series.plot.hist(bins=20)", "tr": "Belirlenen kutu sayısıyla histogram çizer.", "kod": "calisanlar[\"maas\"].plot.hist(bins=20)\nplt.show()", "en": "Generate a histogram with custom bin count from a Pandas Series"}, {"k": "Series.plot.hist(cumulative=True, bins=30)", "tr": "Birikimli histogram çizer.", "kod": "calisanlar[\"kidem\"].plot.hist(cumulative=True, bins=30)\nplt.ylabel(\"Birikimli çalışan sayısı\")\nplt.show()", "en": "Create a cumulative histogram"}, {"k": "Series.plot.bar()", "tr": "Series'ten dikey çubuk grafiği oluşturur.", "kod": "calisanlar[\"departman\"].value_counts().plot.bar()\nplt.show()", "en": "Create a vertical bar chart from a Pandas Series"}, {"k": "Series.plot.barh()", "tr": "Series'ten yatay çubuk grafiği oluşturur.", "kod": "calisanlar.groupby(\"departman\")[\"ayrildi_mi\"].mean().sort_values().plot.barh()\nplt.xlabel(\"Ayrılma oranı\")\nplt.show()", "en": "Create a horizontal bar chart from a Series object"}, {"k": "Series.plot.barh(color='orange', edgecolor='black')", "tr": "Çubuk renklerini ve kenarlıklarını özelleştirir.", "kod": "calisanlar.groupby(\"departman\")[\"egitim_saati\"].mean().sort_values().plot.barh(color=\"orange\", edgecolor=\"black\")\nplt.show()", "en": "Customize bar colors and borders"}, {"k": "DataFrame.plot.box()", "tr": "Dağılımları gösteren kutu grafiği oluşturur.", "kod": "anket.plot.box()\nplt.ylabel(\"Memnuniyet puanı (1-5)\")\nplt.show()", "en": "Create a boxplot to visualize data distributions"}]}, {"id": "seaborn", "baslik": "seaborn ile görselleştirme", "en": "Seaborn visualizations", "ac": "Ayrıntılı seaborn rehberi için ayrı Seaborn sayfasına bakın.", "ogeler": [{"k": "sns.relplot(data=data, x='x_var', y='y_var', hue='hue_var', size='size_var', style='style_var')", "tr": "Birden çok niteliği gösteren ilişki grafiği oluşturur.", "kod": "sns.relplot(data=calisanlar, x=\"kidem\", y=\"maas\", hue=\"seviye\", size=\"performans\", style=\"cinsiyet\", aspect=1.4)\nplt.show()", "en": "Create a relational plot with multiple attributes"}, {"k": "sns.relplot(data=data, x='x_var', y='y_var', hue='hue_var', col='col_var')", "tr": "Bir sütuna göre alt grafiklere bölünmüş ilişki grafikleri.", "kod": "sns.relplot(data=calisanlar, x=\"baglilik\", y=\"devamsizlik\", hue=\"ayrildi\", col=\"seviye\", height=3.3)\nplt.show()", "en": "Create subplots for relational plots based on a column"}, {"k": "sns.heatmap(data, annot=True, cmap='coolwarm')", "tr": "Değer yazılı ısı haritası oluşturur.", "kod": "kor = calisanlar[[\"yas\", \"kidem\", \"maas\", \"performans\", \"baglilik\", \"devamsizlik\"]].corr()\nsns.heatmap(kor, annot=True, cmap=\"coolwarm\", fmt=\".2f\")\nplt.show()", "en": "Create a heatmap with annotations"}, {"k": "sns.heatmap(data, annot=True, linewidths=0.5, cmap='Blues')", "tr": "Hücre aralıklı ve özel renkli ısı haritası oluşturur.", "kod": "tablo = pd.crosstab(calisanlar[\"departman\"], calisanlar[\"seviye\"])\nsns.heatmap(tablo, annot=True, linewidths=0.5, cmap=\"Blues\", fmt=\"d\")\nplt.show()", "en": "Create a heatmap with line spacing and custom colors"}, {"k": "sns.pairplot(data)", "tr": "Tüm değişken çiftleri için grafikler oluşturur.", "kod": "sns.pairplot(anket[[\"ucret\", \"yonetici\", \"gelisim\", \"denge\"]], height=1.9)\nplt.show()", "en": "Create pair plots for all combinations of features"}, {"k": "sns.violinplot(x='x_var', y='y_var', data=data)", "tr": "Dağılımı keman grafiğiyle gösterir.", "kod": "sns.violinplot(x=\"seviye\", y=\"maas\", data=calisanlar)\nplt.show()", "en": "Create a violin plot to visualize data distribution"}, {"k": "sns.jointplot(x='x_var', y='y_var', data=data, kind='reg')", "tr": "İki değişkenli veriyi ortak grafikle gösterir.", "kod": "sns.jointplot(x=\"egitim_saati\", y=\"performans\", data=calisanlar, kind=\"reg\", height=5)\nplt.show()", "en": "Create a joint plot to visualize bivariate data"}]}], "esanlam": {"cizgi": "plot line", "sacilim": "scatter", "cubuk": "bar barh", "yatay": "barh axhline", "dikey": "bar axvline", "histogram": "hist", "pasta": "pie", "alan": "fill_between", "baslik": "title", "etiket": "xlabel ylabel ticks label", "gosterge": "legend", "lejant": "legend", "izgara": "grid subplot subplots", "alt grafik": "subplot subplots", "renk": "color cmap colorbar", "renk haritasi": "cmap colorbar", "aciklama": "annotate text", "ok": "annotate arrowprops", "metin": "text annotate", "kenar": "spines", "isaret": "ticks tick_params", "dondur": "rotation", "stil": "style linestyle", "kutu": "box boxplot", "keman": "violinplot", "isi": "heatmap", "korelasyon": "heatmap corr", "birikimli": "cumulative", "yigilmis": "bottom", "bilimsel": "ticklabel_format", "boyut": "figsize s=", "nesne": "fig, ax subplots"}, "kurulum": "import numpy as np\nimport pandas as pd\nimport matplotlib.pyplot as plt\nimport seaborn as sns\n\nrng = np.random.default_rng(11)\nn = 300\ndepartmanlar = [\"Satış\", \"Üretim\", \"Bilgi Teknolojileri\", \"Finans\", \"İnsan Kaynakları\", \"Pazarlama\"]\ntaban = {\"Satış\": 32000, \"Üretim\": 28000, \"Bilgi Teknolojileri\": 48000,\n         \"Finans\": 42000, \"İnsan Kaynakları\": 36000, \"Pazarlama\": 38000}\n\ndept = rng.choice(departmanlar, n, p=[.25, .30, .15, .10, .08, .12])\ncinsiyet = rng.choice([\"Kadın\", \"Erkek\"], n, p=[.45, .55])\nseviye = rng.choice([\"Uzman\", \"Kıdemli Uzman\", \"Yönetici\"], n, p=[.55, .30, .15])\nkidem = (rng.gamma(2, 3, n) + np.select([seviye == \"Yönetici\", seviye == \"Kıdemli Uzman\"], [6, 3], 0)).round(1)\negitim_saati = np.clip(rng.normal(32, 12, n), 0, 90).round()\nperformans = np.clip(rng.normal(3.3, .6, n) + .012 * (egitim_saati - 32), 1, 5).round(1)\nbaglilik = np.clip(rng.normal(3.5, .8, n) + .3 * (performans - 3.3), 1, 5).round(1)\ncarpan = np.select([seviye == \"Yönetici\", seviye == \"Kıdemli Uzman\"], [1.8, 1.3], 1.0)\nmaas = (np.array([taban[d] for d in dept]) * carpan * (1 + .03 * kidem) * (1 + .05 * (performans - 3))\n        * np.where(cinsiyet == \"Kadın\", .95, 1) * rng.normal(1, .07, n)).round(-2)\np_ayrilma = 1 / (1 + np.exp(-(-1.3 - 1.2 * (baglilik - 3.5) - .07 * kidem)))\nayrildi_mi = (rng.random(n) < p_ayrilma).astype(int)\n\ncalisanlar = pd.DataFrame({\n    \"sicil_no\": [f\"S{1000 + i}\" for i in range(n)],\n    \"departman\": dept, \"cinsiyet\": cinsiyet, \"seviye\": seviye,\n    \"yas\": np.clip(23 + kidem + rng.normal(5, 4, n), 21, 64).round().astype(int),\n    \"kidem\": kidem, \"maas\": maas, \"performans\": performans, \"baglilik\": baglilik,\n    \"egitim_saati\": egitim_saati, \"devamsizlik\": rng.poisson(6 - baglilik),\n    \"ayrildi_mi\": ayrildi_mi,\n})\ncalisanlar[\"ayrildi\"] = np.where(ayrildi_mi == 1, \"Evet\", \"Hayır\")\ncalisanlar[\"yonetici_mi\"] = calisanlar[\"seviye\"].eq(\"Yönetici\")\n\n# Aylık işgücü hareketleri (2023-2025)\ntarih = pd.date_range(\"2023-01-01\", \"2025-12-01\", freq=\"MS\")\nmevsim = 1 + .25 * np.sin(2 * np.pi * (tarih.month - 3) / 12)\naylik = pd.DataFrame({\"tarih\": tarih, \"ise_alim\": rng.poisson(26 * mevsim),\n                      \"ayrilma\": rng.poisson(20 * mevsim[::-1])})\naylik[\"kadro\"] = 1200 + (aylik[\"ise_alim\"] - aylik[\"ayrilma\"]).cumsum()\n\n# Çalışan memnuniyeti anketi (geniş format, 1-5 puan)\nanket = pd.DataFrame({b: np.clip(rng.normal(m, .8, 120), 1, 5).round(1) for b, m in\n                      [(\"ucret\", 2.9), (\"yonetici\", 3.6), (\"ekip\", 4.0), (\"gelisim\", 3.2), (\"denge\", 3.4)]})\n\n# Departman x ay memnuniyet matrisi (0-1)\naylar_tr = [\"Oca\", \"Şub\", \"Mar\", \"Nis\", \"May\", \"Haz\", \"Tem\", \"Ağu\", \"Eyl\", \"Eki\", \"Kas\", \"Ara\"]\nmemnuniyet = pd.DataFrame(rng.random((6, 12)).round(2), index=departmanlar, columns=aylar_tr)\n\n# Eğitim saati - performans artışı (x, y)\negitim = pd.DataFrame({\"egitim_saati\": np.arange(1, 101)})\negitim[\"performans_artisi\"] = (.08 * egitim[\"egitim_saati\"] + rng.normal(0, 2, 100)).round(2)\n\n# Kopya kâğıdındaki x_values / y_values karşılıkları\nay_no = np.arange(1, 13)                                          # x_values\nise_alim_2025 = aylik.loc[aylik.tarih.dt.year == 2025, \"ise_alim\"].to_numpy()   # y_values1\nayrilma_2025 = aylik.loc[aylik.tarih.dt.year == 2025, \"ayrilma\"].to_numpy()     # y_values2\ndept_sayilari = calisanlar[\"departman\"].value_counts()\n\nprint(\"calisanlar:\", calisanlar.shape, \"| aylik:\", aylik.shape, \"| anket:\", anket.shape,\n      \"| memnuniyet:\", memnuniyet.shape, \"| egitim:\", egitim.shape)\ncalisanlar.head()", "paketler": ["numpy", "pandas", "matplotlib"], "micropip": ["seaborn"], "motor": "\nimport sys, io, ast, traceback, json, warnings, base64, re as _re\nimport js\nwarnings.filterwarnings(\"ignore\")\ntry:\n    import pandas as pd\n    pd.set_option(\"display.width\", 140)\nexcept ImportError:\n    pd = None\n\n_ONCESI = \"import matplotlib\\nimport matplotlib.pyplot as plt\\nplt.close('all')\\nmatplotlib.rcdefaults()\"\n_bekleyen = []\n\ndef indir(dosya):\n    js.indirDosya(dosya)\n    print(\"İndiriliyor:\", dosya)\n\ndef pano_kopyala(tablo):\n    metin = tablo.to_csv(sep=\"\\t\", index=False) if hasattr(tablo, \"to_csv\") else str(tablo)\n    js.panoyaYaz(metin)\n    print(\"Panoya kopyalandı.\")\n\nclass HTMLCikti:\n    def __init__(self, h): self.h = h\n    def _repr_html_(self): return self.h\n    def __repr__(self): return \"<HTML çıktı>\"\n\ndef _fig_topla():\n    plt = sys.modules.get(\"matplotlib.pyplot\")\n    if plt is None:\n        return\n    for n in plt.get_fignums():\n        f = plt.figure(n)\n        b = io.BytesIO()\n        f.savefig(b, format=\"png\", dpi=90, bbox_inches=\"tight\")\n        _bekleyen.append(base64.b64encode(b.getvalue()).decode())\n    plt.close(\"all\")\n\ndef _goster(*a, **k):\n    _fig_topla()\n\ndef _matplotlib_hazirla():\n    if \"matplotlib\" in sys.modules or True:\n        import matplotlib\n        matplotlib.use(\"agg\")\n        import matplotlib.pyplot as plt\n        plt.show = _goster\n\n_matplotlib_hazirla()\n\n# ---------- regex görselleştirme ----------\ndef vurgula(desen, metin, bayrak=0):\n    \"\"\"Desenin metindeki tüm eşleşmelerini renkli işaretler, grupları tabloya döker.\"\"\"\n    import html as _h\n    rx = _re.compile(desen, bayrak) if isinstance(desen, str) else desen\n    parcalar, son, eslesmeler = [], 0, list(rx.finditer(metin))\n    for m in eslesmeler:\n        parcalar.append(_h.escape(metin[son:m.start()]))\n        if m.start() == m.end():\n            parcalar.append('<span class=\"bos\" title=\"boş eşleşme\"><\/span>')\n        else:\n            parcalar.append('<span class=\"es\" title=\"%d-%d\">%s<\/span>' % (m.start(), m.end(), _h.escape(m.group())))\n        son = m.end()\n    parcalar.append(_h.escape(metin[son:]))\n    bos = sum(1 for m in eslesmeler if m.start() == m.end())\n    ozet = \"%d eşleşme\" % len(eslesmeler) + (\" (%d boş eşleşme kırmızı çizgiyle)\" % bos if bos else \"\")\n    tablo = \"\"\n    gruplu = [m for m in eslesmeler if m.groups() or m.groupdict()]\n    if eslesmeler and (gruplu or len(eslesmeler) <= 12):\n        adlar = {v: k for k, v in rx.groupindex.items()}\n        bas = \"\".join(\"<th>%s<\/th>\" % (\"grup %d\" % i + (\" (%s)\" % adlar[i] if i in adlar else \"\")) for i in range(1, rx.groups + 1))\n        satirlar = \"\".join(\n            \"<tr><td>%d<\/td><td>%d–%d<\/td><td>%s<\/td>%s<\/tr>\" % (\n                j + 1, m.start(), m.end(), _h.escape(repr(m.group())),\n                \"\".join(\"<td>%s<\/td>\" % _h.escape(repr(g)) for g in m.groups()))\n            for j, m in enumerate(eslesmeler[:30]))\n        tablo = '<table class=\"rx-tablo\"><tr><th>#<\/th><th>konum<\/th><th>eşleşme<\/th>%s<\/tr>%s<\/table>' % (bas, satirlar)\n    return HTMLCikti('<div class=\"rx-ozet\">Desen: <code>%s<\/code> · %s<\/div><div class=\"rx-metin\">%s<\/div>%s' % (\n        _h.escape(rx.pattern), ozet, \"\".join(parcalar), tablo))\n\ndef _regex_test(desen, metin, bayraklar):\n    try:\n        b = 0\n        for c in bayraklar:\n            b |= {\"i\": _re.I, \"m\": _re.M, \"s\": _re.S, \"x\": _re.X, \"a\": _re.A}[c]\n        return vurgula(desen, metin, b).h\n    except _re.error as e:\n        return '<pre class=\"hata\">Desen hatası: %s<\/pre>' % e\n\ndef _yeni_ns():\n    return {\"indir\": indir, \"pano_kopyala\": pano_kopyala, \"vurgula\": vurgula, \"HTMLCikti\": HTMLCikti}\n\ndef _tablo_html(sonuc):\n    if isinstance(sonuc, pd.Series):\n        sonuc = sonuc.to_frame()\n    return sonuc.to_html(max_rows=20, max_cols=14, border=0, na_rep=\"NaN\"), \"%d satır × %d sütun\" % sonuc.shape\n\ndef _grafik_nesnesi(x):\n    if isinstance(x, (list, tuple)):\n        return len(x) > 0 and all(_grafik_nesnesi(e) for e in x)\n    mod = type(x).__module__ or \"\"\n    return mod.startswith((\"matplotlib\", \"seaborn\")) or (hasattr(x, \"shape\") and mod.startswith(\"numpy\") and x.dtype == object)\n\ndef _calistir(kod, g):\n    tampon = io.StringIO()\n    eski = sys.stdout, sys.stderr\n    sys.stdout = sys.stderr = tampon\n    html = boyut = hata = None\n    del _bekleyen[:]\n    try:\n        if _ONCESI:\n            exec(_ONCESI, g)\n        _matplotlib_hazirla()\n        agac = ast.parse(kod)\n        son = None\n        if agac.body and isinstance(agac.body[-1], ast.Expr):\n            son = ast.Expression(agac.body.pop().value)\n        exec(compile(agac, \"<hücre>\", \"exec\"), g)\n        if son is not None:\n            sonuc = eval(compile(son, \"<hücre>\", \"eval\"), g)\n            if pd is not None and isinstance(sonuc, (pd.DataFrame, pd.Series)):\n                html, boyut = _tablo_html(sonuc)\n            elif hasattr(sonuc, \"_repr_html_\") and not hasattr(sonuc, \"figure\") and not hasattr(sonuc, \"fig\"):\n                html = sonuc._repr_html_()\n            elif sonuc is not None and not _grafik_nesnesi(sonuc):\n                print(repr(sonuc))\n    except Exception:\n        hata = traceback.format_exc(limit=-2)\n    finally:\n        sys.stdout, sys.stderr = eski\n    try:\n        _fig_topla()\n    except Exception:\n        pass\n    return json.dumps({\"cikti\": tampon.getvalue(), \"html\": html, \"boyut\": boyut,\n                       \"gorseller\": list(_bekleyen), \"hata\": hata})\n"}</script>
+
+<script>
+const SAYFA = JSON.parse(document.getElementById("sayfaVerisi").textContent);
+const BOLUMLER = SAYFA.bolumler;
+const ESANLAM = SAYFA.esanlam;
+let pyodide = null, hazir = false, ns = null;
+const kartlar = [];
+let aktifBolum = "hepsi";
+
+const durum = (y, c) => { document.getElementById("durumYazi").textContent = y;
+  document.getElementById("durumNokta").className = "nokta" + (c ? " " + c : ""); };
+const kac = t => String(t).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]));
+const sade = t => t.toLocaleLowerCase("tr").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/ı/g, "i");
+const norm = t => sade(t).replace(/\s+/g, " ");
+
+function kartOlustur(o, bolum) {
+  const el = document.createElement("div");
+  el.className = "kart";
+  el.innerHTML = `<div class="kart-bas"><span class="komut"></span></div>
+    <div class="aciklama"></div>${o.en ? `<div class="ingilizce">${kac(o.en)}</div>` : ""}
+    ${o.not ? `<div class="uyari">⚠ ${kac(o.not)}</div>` : ""}<div class="hucre-yer"></div>`;
+  el.querySelector(".komut").textContent = o.k;
+  el.querySelector(".aciklama").textContent = o.tr;
+  const hucre = hucreOlustur(el.querySelector(".hucre-yer"), o.kod);
+  const metin = norm([o.k, o.tr, o.en || "", o.not || "", o.kod, bolum.baslik, bolum.en || ""].join(" "));
+  kartlar.push({el, bolum: bolum.id, metin, hucre, o});
+  return el;
+}
+
+function hucreOlustur(yer, kod) {
+  yer.innerHTML = `<div class="hucre"><div class="hucre-ust"><span>Python</span>
+    <div class="btns"><button class="kopyala" title="Kodu kopyala">⧉</button><button class="sifirla" title="Özgün koda dön">↺</button>
+    <button class="calistir" ${hazir ? "" : "disabled"}>▶ Çalıştır</button></div></div>
+    <textarea class="kod" spellcheck="false"></textarea></div><div class="cikti"></div>`;
+  const ta = yer.querySelector("textarea"), cikti = yer.querySelector(".cikti");
+  ta.value = kod;
+  const boyutla = () => { ta.style.height = "auto"; ta.style.height = (ta.scrollHeight + 4) + "px"; };
+  ta.addEventListener("input", boyutla); requestAnimationFrame(boyutla);
+  ta.addEventListener("keydown", e => {
+    if (e.key === "Tab") { e.preventDefault(); const p = ta.selectionStart;
+      ta.value = ta.value.slice(0, p) + "    " + ta.value.slice(ta.selectionEnd); ta.selectionStart = ta.selectionEnd = p + 4; }
+    if ((e.ctrlKey || e.shiftKey) && e.key === "Enter") { e.preventDefault(); h.calistir(); }
+  });
+  const h = { ta, cikti, btn: yer.querySelector(".calistir"), calistir: () => calistir(h) };
+  h.btn.onclick = h.calistir;
+  yer.querySelector(".sifirla").onclick = () => { ta.value = kod; boyutla(); cikti.innerHTML = ""; };
+  yer.querySelector(".kopyala").onclick = () => navigator.clipboard?.writeText(ta.value);
+  return h;
+}
+
+const kapsayici = document.getElementById("bolumler");
+const toc = document.getElementById("icindekiler");
+const cipler = document.getElementById("cipler");
+cipler.innerHTML = `<span class="cip aktif" data-b="hepsi">Tümü<span class="say"></span></span>`;
+BOLUMLER.forEach((b, i) => {
+  const sec = document.createElement("div");
+  sec.className = "bolum"; sec.id = "b-" + b.id;
+  sec.innerHTML = `<h2>${i + 1}. ${kac(b.baslik)} ${b.en ? `<span style="font-weight:400;color:#9ca3af;font-size:.85rem">· ${kac(b.en)}</span>` : ""}</h2>
+    ${b.ac ? `<div class="bolum-ac">${b.ac}</div>` : ""}`;
+  b.ogeler.forEach(o => sec.appendChild(kartOlustur(o, b)));
+  kapsayici.appendChild(sec);
+  toc.insertAdjacentHTML("beforeend", `<a href="#b-${b.id}" data-b="${b.id}"><span>${i + 1}. ${kac(b.baslik)}</span><span class="say"></span></a>`);
+  cipler.insertAdjacentHTML("beforeend", `<span class="cip" data-b="${b.id}">${kac(b.baslik)}<span class="say"></span></span>`);
+});
+const kurulumHucre = hucreOlustur(document.getElementById("kurulumHucre"), SAYFA.kurulum);
+
+function vurgula(metin, terimler) {
+  if (!terimler.length) return kac(metin);
+  const n = sade(metin);
+  if (n.length !== metin.length) return kac(metin);
+  const isaret = new Array(metin.length).fill(false);
+  terimler.forEach(t => { let i = n.indexOf(t); while (t && i > -1) { for (let j = i; j < i + t.length; j++) isaret[j] = true; i = n.indexOf(t, i + 1); } });
+  let s = "", acik = false;
+  for (let i = 0; i < metin.length; i++) {
+    if (isaret[i] && !acik) { s += "<mark>"; acik = true; }
+    if (!isaret[i] && acik) { s += "</mark>"; acik = false; }
+    s += kac(metin[i]);
+  }
+  return s + (acik ? "</mark>" : "");
+}
+
+function eslesir(k, t) {
+  if (k.metin.includes(t)) return true;
+  const ek = Object.entries(ESANLAM).find(([a]) => a.startsWith(t) || (t.length > 3 && t.startsWith(a)));
+  return ek ? ek[1].split(" ").some(e => e && k.metin.includes(norm(e))) : false;
+}
+
+function ara() {
+  const q = norm(document.getElementById("ara").value).trim();
+  const terimler = q ? q.split(" ").filter(Boolean) : [];
+  let gorunen = 0; const sayac = {};
+  kartlar.forEach(k => {
+    const ok = terimler.every(t => eslesir(k, t));
+    const goster = ok && (aktifBolum === "hepsi" || k.bolum === aktifBolum);
+    k.el.style.display = goster ? "" : "none";
+    if (ok) sayac[k.bolum] = (sayac[k.bolum] || 0) + 1;
+    if (goster) gorunen++;
+    k.el.querySelector(".komut").innerHTML = vurgula(k.o.k, terimler);
+    k.el.querySelector(".aciklama").innerHTML = vurgula(k.o.tr, terimler);
+  });
+  BOLUMLER.forEach(b => {
+    const say = sayac[b.id] || 0;
+    document.getElementById("b-" + b.id).style.display = (say > 0 && (aktifBolum === "hepsi" || aktifBolum === b.id)) ? "" : "none";
+    const a = toc.querySelector(`[data-b="${b.id}"]`);
+    a.querySelector(".say").textContent = say; a.classList.toggle("bos", !say);
+    cipler.querySelector(`[data-b="${b.id}"] .say`).textContent = say;
+  });
+  cipler.querySelector(`[data-b="hepsi"] .say`).textContent = Object.values(sayac).reduce((a, b) => a + b, 0);
+  const filtreli = terimler.length || aktifBolum !== "hepsi";
+  document.getElementById("b-veri").style.display = filtreli ? "none" : "";
+  document.getElementById("bulunamadi").style.display = gorunen ? "none" : "block";
+  document.getElementById("sonucSayisi").textContent = filtreli ? `${gorunen} komut gösteriliyor` : `${kartlar.length} komut`;
+}
+document.getElementById("ara").addEventListener("input", ara);
+document.addEventListener("keydown", e => {
+  const tag = document.activeElement.tagName;
+  if (e.key === "/" && tag !== "TEXTAREA" && tag !== "INPUT") { e.preventDefault(); document.getElementById("ara").focus(); }
+  if (e.key === "Escape" && document.activeElement.id === "ara") { e.target.value = ""; ara(); }
+});
+cipler.addEventListener("click", e => {
+  const c = e.target.closest(".cip"); if (!c) return;
+  aktifBolum = c.dataset.b;
+  cipler.querySelectorAll(".cip").forEach(x => x.classList.toggle("aktif", x === c));
+  ara(); window.scrollTo({top: document.querySelector(".yerlesim").offsetTop - 130, behavior: "smooth"});
+});
+document.querySelectorAll(".oneriler a").forEach(a => a.onclick = () => { document.getElementById("ara").value = a.dataset.q; ara(); });
+ara();
+
+window.indirDosya = ad => {
+  const veri = pyodide.FS.readFile(ad);
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([veri])); a.download = ad.split("/").pop(); a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+};
+window.panoyaYaz = metin => navigator.clipboard?.writeText(metin).catch(() => {});
+
+function ciktiYaz(h, r) {
+  h.cikti.innerHTML = "";
+  if (r.cikti) { const p = document.createElement("pre"); p.textContent = r.cikti; h.cikti.appendChild(p); }
+  if (r.html) h.cikti.insertAdjacentHTML("beforeend", `<div class="html-sar">${r.html}</div>${r.boyut ? `<div class="boyut">${r.boyut}</div>` : ""}`);
+  (r.gorseller || []).forEach((g, i) => h.cikti.insertAdjacentHTML("beforeend",
+    `<div class="img-sar"><a download="grafik_${i + 1}.png" href="data:image/png;base64,${g}">⬇ PNG</a><img alt="grafik" src="data:image/png;base64,${g}"></div>`));
+  if (r.hata) { const p = document.createElement("pre"); p.className = "hata"; p.textContent = r.hata; h.cikti.appendChild(p); }
+}
+
+function calistir(h) {
+  if (!hazir) return;
+  h.btn.disabled = true; h.btn.textContent = "⏳";
+  try { ciktiYaz(h, JSON.parse(pyodide.globals.get("_calistir")(h.ta.value, ns))); }
+  catch (e) { h.cikti.innerHTML = `<pre class="hata">${kac(String(e))}</pre>`; }
+  h.btn.disabled = false; h.btn.textContent = "▶ Çalıştır";
+}
+const bekle = () => new Promise(r => setTimeout(r, 15));
+
+async function baslat() {
+  try {
+    durum("Pyodide yükleniyor…");
+    pyodide = await loadPyodide();
+    durum("Paketler yükleniyor: " + SAYFA.paketler.join(", ") + "…");
+    await pyodide.loadPackage(SAYFA.paketler.concat(["micropip"]));
+    const eksikler = [];
+    for (const pk of SAYFA.micropip) {
+      durum(pk + " kuruluyor…");
+      try { await pyodide.runPythonAsync(`import micropip\nawait micropip.install(${JSON.stringify(pk)})`); }
+      catch (e) { eksikler.push(pk); console.warn(pk, e); }
+    }
+    pyodide.runPython(SAYFA.motor);
+    ns = pyodide.globals.get("_yeni_ns")();
+    hazir = true;
+    document.querySelectorAll(".calistir").forEach(b => b.disabled = false);
+    ["veriSifirla", "gorunenleriCalistir"].forEach(id => document.getElementById(id).disabled = false);
+    calistir(kurulumHucre);
+    durum(eksikler.length ? "Hazır (yüklenemeyen: " + eksikler.join(", ") + ")" : "Hazır: veri setleri yüklendi", "hazir");
+    if (window.sayfaHazir) window.sayfaHazir();
+  } catch (e) { durum("Yükleme hatası: " + e.message, "hata"); console.error(e); }
+}
+document.getElementById("veriSifirla").onclick = () => { calistir(kurulumHucre); durum("Veri sıfırlandı", "hazir"); };
+document.getElementById("gorunenleriCalistir").onclick = async () => {
+  for (const k of kartlar) if (k.el.style.display !== "none" && k.el.closest(".bolum").style.display !== "none") { calistir(k.hucre); await bekle(); }
+};
+baslat();
+</script>
+
+<script>
+(function(){const q=new URLSearchParams(location.search).get("q");
+if(q){const a=document.getElementById("ara");a.value=q;a.dispatchEvent(new Event("input"));}})();
+</script>
+</body>
+</html>

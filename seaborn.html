@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Seaborn ile İK Veri Görselleştirme · Aranabilir Etkileşimli Kopya Kâğıdı</title>
+<script src="https://cdn.jsdelivr.net/pyodide/v0.27.7/full/pyodide.js"></script>
+<style>
+  :root{
+    --bg:#f5f6fa; --card:#fff; --ink:#1f2937; --muted:#6b7280; --line:#e5e7eb;
+    --accent:#4c6ef5; --accent-d:#2f3fb0; --accent-l:#e7ebff;
+    --code:#0b1220; --codeink:#e5e7eb; --warn:#fff7e6; --warnb:#f59e0b; --err:#b91c1c;
+  }
+  *{box-sizing:border-box}
+  html{scroll-padding-top:150px}
+  body{margin:0;font-family:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);line-height:1.55}
+  header{background:linear-gradient(120deg,var(--accent-d),var(--accent));color:#fff;padding:26px 24px 18px}
+  header h1{margin:0 0 4px;font-size:1.65rem}
+  header p{margin:0;opacity:.92;max-width:980px;font-size:.96rem}
+  .durum{margin-top:12px;display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.16);padding:5px 12px;border-radius:999px;font-size:.88rem}
+  .nokta{width:10px;height:10px;border-radius:50%;background:#fbbf24;animation:nabiz 1s infinite}
+  .nokta.hazir{background:#4ade80;animation:none} .nokta.hata{background:#f87171;animation:none}
+  @keyframes nabiz{50%{opacity:.3}}
+  .ara-kutu{position:sticky;top:0;z-index:20;background:rgba(245,246,250,.96);backdrop-filter:blur(6px);border-bottom:1px solid var(--line);padding:12px 24px}
+  .ara-ic{max-width:1300px;margin:0 auto}
+  .ara-satir{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  #ara{flex:1;min-width:260px;font-size:1rem;padding:11px 14px 11px 40px;border:2px solid #cfd8dc;border-radius:10px;outline:none;
+       background:#fff url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="%236b7280" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>') no-repeat 13px center}
+  #ara:focus{border-color:var(--accent)}
+  #sonucSayisi{font-size:.9rem;color:var(--muted);min-width:120px}
+  .btn{border:0;border-radius:8px;padding:9px 14px;font-size:.88rem;cursor:pointer;font-weight:600;background:var(--accent);color:#fff}
+  .btn.ikincil{background:#fff;color:var(--accent);border:1px solid var(--accent)}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .cipler{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
+  .cip{border:1px solid #cfd8dc;background:#fff;border-radius:999px;padding:3px 11px;font-size:.8rem;cursor:pointer;color:#374151}
+  .cip.aktif{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .cip .say{opacity:.7;margin-left:3px}
+  .oneriler{font-size:.8rem;color:var(--muted);margin-top:7px}
+  .oneriler a{color:var(--accent);cursor:pointer;margin-right:8px;text-decoration:underline dotted}
+  .yerlesim{display:grid;grid-template-columns:230px 1fr;gap:22px;max-width:1300px;margin:0 auto;padding:20px 24px}
+  nav{position:sticky;top:150px;align-self:start;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;max-height:calc(100vh - 170px);overflow:auto}
+  nav h3{margin:0 0 6px;font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+  nav a{display:flex;justify-content:space-between;gap:6px;padding:5px 8px;border-radius:6px;color:var(--ink);text-decoration:none;font-size:.88rem}
+  nav a:hover{background:var(--accent-l);color:var(--accent-d)}
+  nav a .say{color:var(--muted);font-size:.78rem}
+  nav a.bos{opacity:.35}
+  .bolum{margin-bottom:26px}
+  .bolum>h2{margin:0 0 4px;color:var(--accent-d);font-size:1.25rem;border-bottom:2px solid var(--accent-l);padding-bottom:4px}
+  .bolum>.bolum-ac{color:var(--muted);font-size:.9rem;margin:4px 0 10px}
+  .kart{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:12px}
+  .kart-bas{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap}
+  .komut{font-family:"JetBrains Mono","Fira Code",Consolas,monospace;font-size:.95rem;font-weight:700;color:var(--accent-d);background:var(--accent-l);padding:3px 8px;border-radius:6px;word-break:break-all;white-space:pre-wrap}
+  .aciklama{margin:7px 0 2px;font-size:.94rem}
+  .ingilizce{font-size:.8rem;color:var(--muted);font-style:italic}
+  .uyari{background:var(--warn);border-left:4px solid var(--warnb);padding:7px 11px;border-radius:6px;font-size:.86rem;margin:8px 0 2px}
+  mark{background:#fde68a;color:inherit;padding:0 1px;border-radius:2px}
+  .hucre{margin-top:10px;border:1px solid #1f2a44;border-radius:9px;overflow:hidden}
+  .hucre-ust{display:flex;justify-content:space-between;align-items:center;background:#16213a;color:#cbd5e1;padding:5px 9px;font-size:.78rem}
+  .hucre-ust .btns{display:flex;gap:6px}
+  .hucre-ust button{border:0;border-radius:6px;padding:4px 11px;font-size:.78rem;cursor:pointer;font-weight:600}
+  .calistir{background:#22c55e;color:#052e14} .calistir:disabled{background:#475569;color:#cbd5e1;cursor:not-allowed}
+  .sifirla,.kopyala{background:#334155;color:#e2e8f0}
+  textarea.kod{display:block;width:100%;min-height:60px;resize:vertical;border:0;outline:none;background:var(--code);color:var(--codeink);
+    font-family:"JetBrains Mono","Fira Code",Consolas,monospace;font-size:13px;line-height:1.5;padding:10px 12px;tab-size:4;white-space:pre;overflow-x:auto}
+  .cikti{border:1px solid var(--line);border-top:0;border-radius:0 0 9px 9px;margin-top:-3px;max-height:620px;overflow:auto}
+  .cikti:empty{display:none}
+  .cikti pre{margin:0;padding:9px 12px;font-size:12.5px;background:#f9fafb;white-space:pre-wrap}
+  .cikti pre.hata{color:var(--err);background:#fef2f2}
+  .cikti .tablo-sar,.cikti .html-sar{padding:8px 10px}
+  .cikti img{display:block;max-width:100%;height:auto;margin:8px auto;background:#fff}
+  .cikti .img-sar{position:relative;padding:4px 8px}
+  .cikti .img-sar a{position:absolute;right:12px;top:8px;font-size:11px;background:#fff;border:1px solid var(--line);border-radius:6px;padding:2px 7px;color:var(--accent-d);text-decoration:none}
+  table.dataframe{border-collapse:collapse;font-size:12.5px;font-family:Consolas,monospace}
+  table.dataframe th,table.dataframe td{border:1px solid #e5e7eb;padding:4px 8px;text-align:right;white-space:nowrap}
+  table.dataframe thead th{background:#f1f5f9;position:sticky;top:0}
+  table.dataframe tbody th{background:#f8fafc;text-align:left}
+  .boyut{font-size:11.5px;color:var(--muted);padding:0 10px 8px}
+  .veri-tablo{border-collapse:collapse;width:100%;font-size:.88rem;margin:6px 0}
+  .veri-tablo th,.veri-tablo td{border:1px solid var(--line);padding:5px 8px;text-align:left;vertical-align:top}
+  .veri-tablo th{background:#f3f4f6}
+  code{background:#eef2f7;padding:1px 5px;border-radius:4px;font-size:.88em}
+  /* regex vurgulama */
+  .rx-metin{font-family:Consolas,monospace;font-size:13.5px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:10px 12px;white-space:pre-wrap;line-height:1.9;word-break:break-word}
+  .rx-metin .es{background:#bfdbfe;border-bottom:2px solid #2563eb;border-radius:3px;padding:1px 0}
+  .rx-metin .es:nth-of-type(even){background:#bbf7d0;border-bottom-color:#16a34a}
+  .rx-metin .bos{display:inline-block;width:2px;height:1.1em;background:#dc2626;vertical-align:middle;margin:0 1px}
+  .rx-ozet{font-size:12.5px;color:var(--muted);margin:6px 2px}
+  .rx-tablo{border-collapse:collapse;font-size:12px;font-family:Consolas,monospace;margin-top:4px}
+  .rx-tablo th,.rx-tablo td{border:1px solid var(--line);padding:3px 7px;text-align:left}
+  .rx-tablo th{background:#f1f5f9}
+  .test-arac{display:grid;grid-template-columns:1fr 150px;gap:8px;margin:8px 0}
+  .test-arac input,.test-arac textarea{font-family:Consolas,monospace;font-size:14px;padding:9px 11px;border:2px solid #cfd8dc;border-radius:8px;outline:none;width:100%}
+  .test-arac textarea{grid-column:1/-1;min-height:110px;resize:vertical}
+  .bayraklar{display:flex;gap:12px;flex-wrap:wrap;font-size:.85rem;margin:2px 0 6px}
+  #bulunamadi{display:none;background:#fff;border:1px dashed #cbd5e1;border-radius:12px;padding:28px;text-align:center;color:var(--muted)}
+  footer{text-align:center;color:var(--muted);font-size:.83rem;padding:6px 0 30px}
+  @media (max-width:920px){.yerlesim{grid-template-columns:1fr} nav{display:none}}
+</style>
+</head>
+<body>
+<div id="jsYok" style="background:#fef3c7;border-bottom:2px solid #f59e0b;color:#78350f;padding:12px 20px;font:15px/1.5 system-ui,sans-serif">
+<b>⚠ Çalıştır düğmeleri görünmüyorsa:</b> Bu sayfa JavaScript ile çalışır; uygulamanın dosya önizleme penceresi betikleri çalıştırmaz.
+Dosyayı <b>indirip</b> bilgisayarınızda <b>Chrome, Edge veya Firefox</b> ile açın (çift tıklamak yeterli). İlk açılışta internet bağlantısı gerekir.</div>
+<script>document.getElementById("jsYok").remove()</script>
+<header>
+  <a href="index.html" style="color:#fff;opacity:.85;text-decoration:none;font-size:.88rem;display:inline-block;margin-bottom:6px">← Tüm kopya kâğıtları</a>
+  <h1>Seaborn ile İK Veri Görselleştirme</h1>
+  <p>DataCamp “Seaborn Cheat Sheet” kopya kâğıdındaki tüm komutlar insan kaynakları verisiyle yeniden yazıldı. Kodlar tarayıcıda <b>Pyodide</b> ile çalışır; grafikler doğrudan hücrenin altında çizilir. Kaldırılmış fonksiyonlar (distplot, factorplot) güncel karşılıklarıyla gösterilir.</p>
+  <div class="durum"><span class="nokta" id="durumNokta"></span><span id="durumYazi">Python ortamı yükleniyor…</span></div>
+</header>
+
+<div class="ara-kutu">
+  <div class="ara-ic">
+    <div class="ara-satir">
+      <input id="ara" type="search" placeholder="Ara: kutu grafiği, heatmap, palet, regresyon, facet, başlık, kaydet…  ( / tuşu ile odaklan )" autocomplete="off">
+      <span id="sonucSayisi"></span>
+      <button class="btn ikincil" id="veriSifirla" disabled title="Veri setlerini ilk hâline döndürür">↺ Veriyi sıfırla</button>
+      <button class="btn" id="gorunenleriCalistir" disabled>▶ Görünenleri çalıştır</button>
+    </div>
+    <div class="cipler" id="cipler"></div>
+    <div class="oneriler">Örnek aramalar: <a data-q="kutu">kutu</a><a data-q="keman">keman</a><a data-q="ısı">ısı</a><a data-q="regresyon">regresyon</a><a data-q="palet">palet</a><a data-q="stil">stil</a><a data-q="etiket">etiket</a><a data-q="facet">facet</a><a data-q="pairplot">pairplot</a><a data-q="kaydet">kaydet</a></div>
+  </div>
+</div>
+
+<div class="yerlesim">
+  <nav><h3>Bölümler</h3><div id="icindekiler"></div></nav>
+  <main>
+    <div class="bolum" id="b-veri">
+      <h2>Kullanılan İK veri setleri</h2>
+      <p class="bolum-ac">Kopya kâğıdındaki hazır veri setleri (titanic, iris, tips) yerine aşağıdaki sentetik İK verileri kullanılıyor. Her hücre temiz bir grafik ortamıyla başlar.</p>
+<table class="veri-tablo">
+<tr><th>Nesne</th><th>Kopya kâğıdı karşılığı</th><th>İçerik</th></tr>
+<tr><td><code>calisanlar</code></td><td>titanic / iris / tips</td><td>300 çalışan: departman, cinsiyet, seviye (Uzman / Kıdemli Uzman / Yönetici), yaş, kıdem, maaş, performans, bağlılık, eğitim saati, devamsızlık, ayrıldı (Evet/Hayır), ayrildi_mi (1/0), yonetici_mi</td></tr>
+<tr><td><code>aylik</code></td><td>zaman serisi</td><td>2023–2025 aylık işe alım, ayrılma ve kadro</td></tr>
+<tr><td><code>anket</code></td><td>iris (geniş format)</td><td>120 yanıtlık memnuniyet anketi: ücret, yönetici, ekip, gelişim, iş-yaşam dengesi (1–5)</td></tr>
+<tr><td><code>memnuniyet</code></td><td>uniform_data</td><td>6 departman × 12 ay memnuniyet matrisi (0–1)</td></tr>
+<tr><td><code>egitim</code></td><td>data (x, y)</td><td>Eğitim saati (1–100) ve performans artışı</td></tr>
+</table>
+      <div class="kart"><div class="kart-bas"><span class="komut">Veri kurulumu</span></div>
+        <div class="aciklama">Sayfa açılınca otomatik çalışır. Düzenleyip yeniden çalıştırabilirsiniz.</div>
+        <div id="kurulumHucre"></div>
+      </div>
+    </div>
+    <div id="bolumler"></div>
+    <div id="bulunamadi">Aramanızla eşleşen komut bulunamadı. Daha kısa bir kelime ya da İngilizce karşılığını deneyin.</div>
+    <footer>Kaynak: DataCamp, <i>Python For Data Science: Seaborn Cheat Sheet</i> · Veriler sentetiktir, öğretim amaçlıdır · Pyodide + seaborn</footer>
+  </main>
+</div>
+
+<script type="application/json" id="sayfaVerisi">{"bolumler": [{"id": "adimlar", "baslik": "Seaborn ile grafik oluşturmanın adımları", "en": "Basic steps", "ac": "1) Veriyi hazırla · 2) Figür estetiğini ayarla · 3) Seaborn ile çiz · 4) Grafiği özelleştir · 5) Göster", "ogeler": [{"k": "import matplotlib.pyplot as plt\nimport seaborn as sns", "tr": "Kütüphaneleri alışılmış kısaltmalarıyla içe aktarır.", "kod": "import matplotlib.pyplot as plt\nimport seaborn as sns\nprint(\"seaborn sürümü:\", sns.__version__)", "en": "Make use of the following aliases to import the libraries"}, {"k": "5 adımlı örnek (tips → calisanlar)", "tr": "Kopya kâğıdındaki beş adımlı örneğin İK sürümü: performans ile maaş ilişkisi.", "kod": "veri = calisanlar                                   # 1. Adım: veri\nsns.set_style(\"whitegrid\")                          # 2. Adım: estetik\ng = sns.lmplot(x=\"performans\", y=\"maas\",            # 3. Adım: çizim\n               data=veri, aspect=2)\ng = (g.set_axis_labels(\"Performans puanı\", \"Aylık brüt maaş (TL)\")\n      .set(xlim=(1, 5), ylim=(0, 160000)))          # 4. Adım: özelleştirme\nplt.title(\"Performans ve Maaş\")\nplt.show()                                          # 5. Adım: göster", "en": "tips = sns.load_dataset('tips') … g = sns.lmplot(x='tip', y='total_bill', data=tips, aspect=2)", "not": "Kopya kâğıdındaki plt.show(g) geçersizdir; plt.show() parametresiz çağrılır."}]}, {"id": "veri", "baslik": "Veri", "en": "1 Data", "ac": "Listeler, NumPy ve pandas ile veri hazırlama.", "ogeler": [{"k": "import pandas as pd\nimport numpy as np", "tr": "pandas ve numpy'ı içe aktarır.", "kod": "import pandas as pd\nimport numpy as np\nprint(pd.__version__, np.__version__)", "en": ""}, {"k": "uniform_data = np.random.rand(10, 12)", "tr": "0–1 arası rastgele sayılardan 10×12 bir matris üretir (ısı haritası için).", "kod": "uniform_data = np.random.rand(10, 12)\nprint(uniform_data.shape)\nmemnuniyet          # İK karşılığı: 6 departman x 12 ay memnuniyet matrisi", "en": ""}, {"k": "data = pd.DataFrame({'x':np.arange(1,101), 'y':np.random.normal(0,4,100)})", "tr": "x ve y sütunlu bir DataFrame oluşturur.", "kod": "data = pd.DataFrame({\"x\": np.arange(1, 101),\n                     \"y\": np.random.normal(0, 4, 100)})\negitim.head()       # İK karşılığı: eğitim saati (x) ve performans artışı (y)", "en": ""}, {"k": "titanic = sns.load_dataset('titanic')\niris = sns.load_dataset('iris')", "tr": "Seaborn'un hazır veri setlerini yükler.", "kod": "# Pyodide tarayıcıda internetten veri seti indiremez; bu sayfada İK verisi kullanılıyor\nprint(calisanlar.dtypes)\ncalisanlar.describe().round(1)", "en": "Seaborn also offers built-in data sets", "not": "sns.load_dataset() veriyi GitHub'dan indirir; tarayıcı güvenliği nedeniyle Pyodide'de çalışmaz."}]}, {"id": "estetik", "baslik": "Figür estetiği", "en": "2 Figure aesthetics", "ac": "Stil, bağlam ve renk paleti.", "ogeler": [{"k": "f, ax = plt.subplots(figsize=(5,6))", "tr": "Bir figür ve tek bir alt grafik (eksen) oluşturur.", "kod": "f, ax = plt.subplots(figsize=(5, 6))\nsns.boxplot(x=\"seviye\", y=\"maas\", data=calisanlar, ax=ax)\nax.set_title(\"Seviyeye göre maaş\")", "en": ""}, {"k": "sns.set()", "tr": "Seaborn varsayılanlarını (yeniden) yükler.", "kod": "sns.set()\nsns.histplot(calisanlar[\"yas\"])", "en": "(Re)set the seaborn default", "not": "sns.set() artık sns.set_theme()'in eski adıdır; ikisi aynı işi yapar."}, {"k": "sns.set_style(\"whitegrid\")", "tr": "matplotlib parametrelerini bir stile göre ayarlar (darkgrid, whitegrid, dark, white, ticks).", "kod": "sns.set_style(\"whitegrid\")\nsns.barplot(x=\"departman\", y=\"maas\", data=calisanlar)\nplt.xticks(rotation=30)", "en": "Set the matplotlib parameters"}, {"k": "sns.set_style(\"ticks\", {\"xtick.major.size\":8, \"ytick.major.size\":8})", "tr": "Stili ayarlarken tek tek parametreleri de değiştirir.", "kod": "sns.set_style(\"ticks\", {\"xtick.major.size\": 8, \"ytick.major.size\": 8})\nsns.scatterplot(x=\"kidem\", y=\"maas\", data=calisanlar)", "en": "Set the matplotlib parameters"}, {"k": "sns.axes_style(\"whitegrid\")", "tr": "Stil parametrelerini sözlük olarak döndürür ya da with ile geçici stil uygular.", "kod": "print(sns.axes_style(\"whitegrid\")[\"axes.facecolor\"])\nwith sns.axes_style(\"white\"):          # yalnızca bu blokta geçerli\n    sns.kdeplot(x=\"maas\", hue=\"seviye\", data=calisanlar, fill=True)", "en": "Return a dict of params or use with 'with' to temporarily set the style"}, {"k": "sns.set_context(\"talk\")", "tr": "Bağlamı 'talk' (sunum) yapar; yazı ve çizgiler büyür. Seçenekler: paper, notebook, talk, poster.", "kod": "sns.set_context(\"talk\")\nsns.countplot(x=\"seviye\", data=calisanlar)", "en": "Set context to 'talk'"}, {"k": "sns.set_context(\"notebook\", font_scale=1.5, rc={\"lines.linewidth\":2.5})", "tr": "Bağlamı 'notebook' yapar, yazıları ölçekler ve parametreleri geçersiz kılar.", "kod": "sns.set_context(\"notebook\", font_scale=1.5, rc={\"lines.linewidth\": 2.5})\nsns.lineplot(x=\"tarih\", y=\"kadro\", data=aylik)\nplt.xticks(rotation=30)", "en": "Set context to 'notebook', scale font elements and override param mapping"}, {"k": "sns.set_palette(\"husl\",3)", "tr": "Renk paletini tanımlar.", "kod": "sns.set_palette(\"husl\", 3)\nsns.boxplot(x=\"seviye\", y=\"performans\", hue=\"seviye\", data=calisanlar)", "en": "Define the color palette"}, {"k": "sns.color_palette(\"husl\")", "tr": "Paleti döndürür; with ile geçici olarak kullanılır.", "kod": "with sns.color_palette(\"husl\"):\n    sns.barplot(x=\"departman\", y=\"baglilik\", hue=\"departman\", data=calisanlar)\nplt.xticks(rotation=30)", "en": "Use with 'with' to temporarily set palette"}, {"k": "flatui = [\"#9b59b6\",\"#3498db\",\"#95a5a6\",\"#e74c3c\",\"#34495e\",\"#2ecc71\"]\nsns.set_palette(flatui)", "tr": "Kendi renk paletinizi tanımlar.", "kod": "flatui = [\"#9b59b6\", \"#3498db\", \"#95a5a6\", \"#e74c3c\", \"#34495e\", \"#2ecc71\"]\nsns.set_palette(flatui)\nsns.violinplot(x=\"departman\", y=\"baglilik\", hue=\"departman\", data=calisanlar)\nplt.xticks(rotation=30)", "en": "Set your own color palette"}]}, {"id": "kategorik", "baslik": "Kategorik grafikler", "en": "Categorical plots", "ac": "Seviye, departman, cinsiyet gibi kategorilere göre dağılımlar.", "ogeler": [{"k": "sns.stripplot(x=\"species\", y=\"petal_length\", data=iris)", "tr": "Tek kategorik değişkenli saçılım grafiği.", "kod": "sns.stripplot(x=\"seviye\", y=\"maas\", data=calisanlar, alpha=.6)", "en": "Scatterplot with one categorical variable"}, {"k": "sns.swarmplot(x=\"species\", y=\"petal_length\", data=iris)", "tr": "Noktaların üst üste binmediği kategorik saçılım grafiği.", "kod": "sns.swarmplot(x=\"seviye\", y=\"performans\", data=calisanlar.sample(150, random_state=1), size=4)", "en": "Categorical scatterplot with non-overlapping points", "not": "Çok sayıda noktada swarmplot yavaşlar; burada 150 kişilik örneklem kullanılıyor."}, {"k": "sns.barplot(x=\"sex\", y=\"survived\", hue=\"class\", data=titanic)", "tr": "Nokta tahminlerini ve güven aralıklarını çubuklarla gösterir. İK sürümü: cinsiyet ve seviyeye göre ayrılma oranı.", "kod": "sns.barplot(x=\"cinsiyet\", y=\"ayrildi_mi\", hue=\"seviye\", data=calisanlar)\nplt.ylabel(\"Ayrılma oranı\")", "en": "Show point estimates & confidence intervals"}, {"k": "sns.countplot(x=\"deck\", data=titanic, palette=\"Greens_d\")", "tr": "Gözlem sayılarını gösterir.", "kod": "sns.countplot(x=\"departman\", data=calisanlar, hue=\"departman\", palette=\"Greens_d\", legend=False)\nplt.xticks(rotation=30)", "en": "Show count of observations", "not": "seaborn 0.13'te hue olmadan palette uyarı verir; hue=x ve legend=False ekleyin."}, {"k": "sns.pointplot(x=\"class\", y=\"survived\", hue=\"sex\", data=titanic, palette={...}, markers=[\"^\",\"o\"], linestyles=[\"-\",\"--\"])", "tr": "Nokta tahminlerini ve güven aralıklarını gösterir; işaretçi ve çizgi stilleri kategoriye göre değişir.", "kod": "sns.pointplot(x=\"seviye\", y=\"ayrildi_mi\", hue=\"cinsiyet\", data=calisanlar,\n              palette={\"Kadın\": \"m\", \"Erkek\": \"g\"},\n              markers=[\"^\", \"o\"], linestyles=[\"-\", \"--\"])\nplt.ylabel(\"Ayrılma oranı\")", "en": "Show point estimates & confidence intervals"}, {"k": "sns.boxplot(x=\"alive\", y=\"age\", hue=\"adult_male\", data=titanic)", "tr": "Kutu grafiği. İK sürümü: ayrılan/kalan çalışanların yaşı, yöneticilere göre.", "kod": "sns.boxplot(x=\"ayrildi\", y=\"yas\", hue=\"yonetici_mi\", data=calisanlar)", "en": "Boxplot"}, {"k": "sns.boxplot(data=iris, orient=\"h\")", "tr": "Geniş formatlı veriyle yatay kutu grafiği.", "kod": "sns.boxplot(data=anket, orient=\"h\")\nplt.xlabel(\"Memnuniyet puanı (1-5)\")", "en": "Boxplot with wide-form data"}, {"k": "sns.violinplot(x=\"age\", y=\"sex\", hue=\"survived\", data=titanic)", "tr": "Keman grafiği.", "kod": "sns.violinplot(x=\"yas\", y=\"cinsiyet\", hue=\"ayrildi\", data=calisanlar, split=True)", "en": "Violin plot"}]}, {"id": "dagilim", "baslik": "Dağılım grafikleri", "en": "Distribution plots", "ac": "", "ogeler": [{"k": "plot = sns.distplot(data.y, kde=False, color=\"b\")", "tr": "Tek değişkenli dağılımı çizer.", "kod": "plot = sns.histplot(calisanlar[\"maas\"], kde=False, color=\"b\")\nplot.set_xlabel(\"Aylık brüt maaş (TL)\")", "en": "Plot univariate distribution", "not": "distplot seaborn 0.14'te kaldırılacak; yerine histplot (eksen düzeyi) ya da displot (figür düzeyi) kullanın."}, {"k": "sns.displot(...)", "tr": "distplot'un figür düzeyindeki yeni karşılığı; col/row ile alt grafiklere böler.", "kod": "sns.displot(data=calisanlar, x=\"maas\", col=\"seviye\", kde=True, height=3.2)", "en": ""}]}, {"id": "matris", "baslik": "Matris grafikleri", "en": "Matrix plots", "ac": "", "ogeler": [{"k": "sns.heatmap(uniform_data, vmin=0, vmax=1)", "tr": "Isı haritası.", "kod": "sns.heatmap(memnuniyet, vmin=0, vmax=1, cmap=\"YlGnBu\")\nplt.title(\"Departman x Ay memnuniyet\")", "en": "Heatmap"}, {"k": "sns.heatmap(df.corr(), annot=True)", "tr": "Korelasyon matrisinin değerli ısı haritası (İK analitiğinde en sık kullanım).", "kod": "kor = calisanlar[[\"yas\", \"kidem\", \"maas\", \"performans\", \"baglilik\", \"egitim_saati\", \"devamsizlik\", \"ayrildi_mi\"]].corr()\nsns.heatmap(kor, annot=True, fmt=\".2f\", vmin=-1, vmax=1, cmap=\"RdBu_r\")", "en": ""}]}, {"id": "regresyon", "baslik": "Regresyon grafikleri", "en": "Regression plots", "ac": "", "ogeler": [{"k": "sns.regplot(x=\"sepal_width\", y=\"sepal_length\", data=iris, ax=ax)", "tr": "Veriyi ve doğrusal regresyon modelini çizer.", "kod": "f, ax = plt.subplots()\nsns.regplot(x=\"egitim_saati\", y=\"performans\", data=calisanlar, ax=ax)", "en": "Plot data and a linear regression model fit"}, {"k": "sns.lmplot(x=\"sepal_width\", y=\"sepal_length\", hue=\"species\", data=iris)", "tr": "Regresyon modellerini bir FacetGrid üzerinde gruplara göre çizer.", "kod": "sns.lmplot(x=\"kidem\", y=\"maas\", hue=\"seviye\", data=calisanlar, height=4, aspect=1.4)", "en": "Plot data and regression model fits across a FacetGrid"}]}, {"id": "izgara", "baslik": "Eksen ızgaraları", "en": "Axis grids", "ac": "Koşullu ve çok değişkenli ilişkiler için alt grafik ızgaraları.", "ogeler": [{"k": "g = sns.FacetGrid(titanic, col=\"survived\", row=\"sex\")\ng = g.map(plt.hist,\"age\")", "tr": "Koşullu ilişkiler için alt grafik ızgarası.", "kod": "g = sns.FacetGrid(calisanlar, col=\"ayrildi\", row=\"cinsiyet\", height=2.8)\ng = g.map(plt.hist, \"yas\")", "en": "Subplot grid for plotting conditional relationships"}, {"k": "sns.factorplot(x=\"pclass\", y=\"survived\", hue=\"sex\", data=titanic)", "tr": "Kategorik bir grafiği FacetGrid üzerine çizer.", "kod": "sns.catplot(x=\"seviye\", y=\"ayrildi_mi\", hue=\"cinsiyet\", data=calisanlar, kind=\"point\", aspect=1.4)", "en": "Draw a categorical plot onto a FacetGrid", "not": "factorplot kaldırıldı; yerine sns.catplot(kind=...) kullanılır."}, {"k": "h = sns.PairGrid(iris)\nh = h.map(plt.scatter)", "tr": "İkili ilişkiler için alt grafik ızgarası.", "kod": "h = sns.PairGrid(anket[[\"ucret\", \"yonetici\", \"gelisim\"]], height=2.2)\nh = h.map(plt.scatter, alpha=.5)", "en": "Subplot grid for plotting pairwise relationships"}, {"k": "sns.pairplot(iris)", "tr": "Tüm değişken çiftlerinin iki değişkenli dağılımlarını çizer.", "kod": "sns.pairplot(calisanlar[[\"kidem\", \"maas\", \"performans\", \"baglilik\", \"seviye\"]], hue=\"seviye\", height=2)", "en": "Plot pairwise bivariate distributions"}, {"k": "i = sns.JointGrid(x=\"x\", y=\"y\", data=data)\ni = i.plot(sns.regplot, sns.distplot)", "tr": "İki değişkenli grafik ve kenarlarda tek değişkenli grafiklerden oluşan ızgara.", "kod": "i = sns.JointGrid(x=\"egitim_saati\", y=\"performans_artisi\", data=egitim, height=5)\ni = i.plot(sns.regplot, sns.histplot)", "en": "Grid for bivariate plot with marginal univariate plots", "not": "distplot yerine histplot kullanıldı."}, {"k": "sns.jointplot(\"sepal_length\", \"sepal_width\", data=iris, kind='kde')", "tr": "İki değişkenli dağılımı çizer.", "kod": "sns.jointplot(x=\"kidem\", y=\"maas\", data=calisanlar, kind=\"kde\", fill=True, height=5)", "en": "Plot bivariate distribution", "not": "seaborn 0.12'den beri x ve y anahtar kelimeyle verilmelidir (x=..., y=...)."}]}, {"id": "axisgrid", "baslik": "Axisgrid nesnelerini özelleştirme", "en": "4 Further customizations: Axisgrid objects", "ac": "FacetGrid, PairGrid gibi figür düzeyi nesnelerin yöntemleri.", "ogeler": [{"k": "g.despine(left=True)", "tr": "Sol kenar çizgisini (spine) kaldırır.", "kod": "g = sns.catplot(x=\"departman\", y=\"maas\", data=calisanlar, kind=\"bar\", aspect=2)\ng.despine(left=True)\ng.set_xticklabels(rotation=30)", "en": "Remove left spine"}, {"k": "g.set_ylabels(\"Survived\")", "tr": "y ekseni etiketlerini ayarlar.", "kod": "g = sns.catplot(x=\"seviye\", y=\"ayrildi_mi\", data=calisanlar, kind=\"bar\")\ng.set_ylabels(\"Ayrılma oranı\")", "en": ""}, {"k": "g.set_xticklabels(rotation=45)", "tr": "x ekseni işaret etiketlerini ayarlar (döndürme).", "kod": "g = sns.catplot(x=\"departman\", y=\"baglilik\", data=calisanlar, kind=\"box\", aspect=1.8)\ng.set_xticklabels(rotation=45)", "en": ""}, {"k": "g.set_axis_labels(\"Survived\", \"Sex\")", "tr": "Eksen etiketlerini birlikte ayarlar.", "kod": "g = sns.catplot(x=\"cinsiyet\", y=\"ayrildi_mi\", data=calisanlar, kind=\"bar\")\ng.set_axis_labels(\"Cinsiyet\", \"Ayrılma oranı\")", "en": ""}, {"k": "h.set(xlim=(0,5), ylim=(0,5), xticks=[0,2.5,5], yticks=[0,2.5,5])", "tr": "x ve y eksenlerinin sınırlarını ve işaretlerini ayarlar.", "kod": "h = sns.PairGrid(anket[[\"ucret\", \"ekip\", \"denge\"]], height=2.2)\nh = h.map(plt.scatter, alpha=.4)\nh.set(xlim=(0, 5), ylim=(0, 5), xticks=[0, 2.5, 5], yticks=[0, 2.5, 5])", "en": ""}]}, {"id": "plot", "baslik": "Grafiği özelleştirme (matplotlib)", "en": "4 Further customizations: Plot", "ac": "Eksen düzeyindeki seaborn grafikleri matplotlib fonksiyonlarıyla özelleştirilir.", "ogeler": [{"k": "plt.title(\"A Title\")", "tr": "Grafik başlığı ekler.", "kod": "sns.histplot(calisanlar[\"kidem\"])\nplt.title(\"Kıdem dağılımı\")", "en": ""}, {"k": "plt.ylabel(\"Survived\")", "tr": "y ekseni etiketini ayarlar.", "kod": "sns.barplot(x=\"seviye\", y=\"ayrildi_mi\", data=calisanlar)\nplt.ylabel(\"Ayrılma oranı\")", "en": ""}, {"k": "plt.xlabel(\"Sex\")", "tr": "x ekseni etiketini ayarlar.", "kod": "sns.barplot(x=\"cinsiyet\", y=\"maas\", data=calisanlar)\nplt.xlabel(\"Cinsiyet\")", "en": ""}, {"k": "plt.ylim(0,100)", "tr": "y ekseninin sınırlarını ayarlar.", "kod": "sns.barplot(x=\"seviye\", y=\"ayrildi_mi\", data=calisanlar, estimator=lambda v: 100 * v.mean())\nplt.ylabel(\"Ayrılma oranı (%)\")\nplt.ylim(0, 100)", "en": ""}, {"k": "plt.xlim(0,10)", "tr": "x ekseninin sınırlarını ayarlar.", "kod": "sns.histplot(calisanlar[\"devamsizlik\"], discrete=True)\nplt.xlim(0, 10)", "en": ""}, {"k": "plt.setp(ax, yticks=[0,5])", "tr": "Bir grafik özelliğini ayarlar.", "kod": "ax = sns.stripplot(x=\"seviye\", y=\"performans\", data=calisanlar)\nplt.setp(ax, yticks=[1, 3, 5])", "en": ""}, {"k": "plt.tight_layout()", "tr": "Alt grafik aralıklarını otomatik düzenler.", "kod": "f, (ax1, ax2) = plt.subplots(1, 2, figsize=(9, 3.5))\nsns.histplot(calisanlar[\"maas\"], ax=ax1)\nsns.boxplot(x=\"seviye\", y=\"maas\", data=calisanlar, ax=ax2)\nplt.tight_layout()", "en": ""}]}, {"id": "kaydet", "baslik": "Göster ya da kaydet", "en": "5 Show or save plot", "ac": "Kaydedilen dosyayı <code>indir(\"dosya.png\")<\/code> ile bilgisayarınıza indirebilirsiniz.", "ogeler": [{"k": "plt.show()", "tr": "Grafiği gösterir.", "kod": "sns.lineplot(x=\"tarih\", y=\"ise_alim\", data=aylik)\nplt.show()", "en": ""}, {"k": "plt.savefig(\"foo.png\")", "tr": "Grafiği dosya olarak kaydeder.", "kod": "sns.boxplot(x=\"departman\", y=\"maas\", data=calisanlar)\nplt.xticks(rotation=30)\nplt.savefig(\"maas_departman.png\", dpi=150, bbox_inches=\"tight\")\nimport os\nprint(\"Kaydedildi:\", os.path.getsize(\"maas_departman.png\"), \"bayt\")\n# indir(\"maas_departman.png\")   # bilgisayara indirmek için # işaretini kaldırın", "en": ""}, {"k": "plt.savefig(\"foo.png\", transparent=True)", "tr": "Saydam arka planlı kaydeder (sunumlara eklemek için).", "kod": "sns.countplot(x=\"seviye\", data=calisanlar)\nplt.savefig(\"seviye_saydam.png\", transparent=True)\nprint(\"Saydam PNG kaydedildi\")", "en": ""}]}, {"id": "temizle", "baslik": "Kapat ve temizle", "en": "Close & clear", "ac": "", "ogeler": [{"k": "plt.cla()", "tr": "Bir ekseni temizler (figür ve eksen kalır).", "kod": "sns.histplot(calisanlar[\"yas\"])\nplt.cla()            # eksen boşalır\nplt.title(\"cla() sonrası boş eksen\")", "en": ""}, {"k": "plt.clf()", "tr": "Tüm figürü temizler.", "kod": "sns.histplot(calisanlar[\"yas\"])\nplt.clf()            # figür tamamen boşalır\nplt.text(.3, .5, \"clf() sonrası boş figür\")", "en": ""}, {"k": "plt.close()", "tr": "Pencereyi (figürü) kapatır.", "kod": "sns.histplot(calisanlar[\"yas\"])\nplt.close()\nprint(\"Figür kapatıldı; açık figür sayısı:\", len(plt.get_fignums()))", "en": ""}]}], "esanlam": {"kutu": "boxplot", "keman": "violinplot", "sacilim": "scatter stripplot swarmplot", "cubuk": "barplot countplot bar", "sayi": "countplot", "isi": "heatmap", "korelasyon": "heatmap corr", "regresyon": "regplot lmplot", "dagilim": "distplot histplot displot kde", "histogram": "histplot hist", "renk": "palette color_palette", "palet": "palette", "stil": "set_style axes_style", "baslik": "title", "etiket": "label xlabel ylabel set_axis_labels", "sinir": "xlim ylim", "kaydet": "savefig", "temizle": "cla clf close", "izgara": "facetgrid pairgrid jointgrid", "eksen": "ax axes subplots", "boyut": "figsize", "ayrilma": "ayrildi", "maas": "maas", "yogunluk": "kde", "nokta": "pointplot stripplot", "cift": "pairplot pairgrid", "ortak": "jointplot jointgrid"}, "kurulum": "import numpy as np\nimport pandas as pd\nimport matplotlib.pyplot as plt\nimport seaborn as sns\n\nrng = np.random.default_rng(11)\nn = 300\ndepartmanlar = [\"Satış\", \"Üretim\", \"Bilgi Teknolojileri\", \"Finans\", \"İnsan Kaynakları\", \"Pazarlama\"]\ntaban = {\"Satış\": 32000, \"Üretim\": 28000, \"Bilgi Teknolojileri\": 48000,\n         \"Finans\": 42000, \"İnsan Kaynakları\": 36000, \"Pazarlama\": 38000}\n\ndept = rng.choice(departmanlar, n, p=[.25, .30, .15, .10, .08, .12])\ncinsiyet = rng.choice([\"Kadın\", \"Erkek\"], n, p=[.45, .55])\nseviye = rng.choice([\"Uzman\", \"Kıdemli Uzman\", \"Yönetici\"], n, p=[.55, .30, .15])\nkidem = (rng.gamma(2, 3, n) + np.select([seviye == \"Yönetici\", seviye == \"Kıdemli Uzman\"], [6, 3], 0)).round(1)\negitim_saati = np.clip(rng.normal(32, 12, n), 0, 90).round()\nperformans = np.clip(rng.normal(3.3, .6, n) + .012 * (egitim_saati - 32), 1, 5).round(1)\nbaglilik = np.clip(rng.normal(3.5, .8, n) + .3 * (performans - 3.3), 1, 5).round(1)\ncarpan = np.select([seviye == \"Yönetici\", seviye == \"Kıdemli Uzman\"], [1.8, 1.3], 1.0)\nmaas = (np.array([taban[d] for d in dept]) * carpan * (1 + .03 * kidem) * (1 + .05 * (performans - 3))\n        * np.where(cinsiyet == \"Kadın\", .95, 1) * rng.normal(1, .07, n)).round(-2)\np_ayrilma = 1 / (1 + np.exp(-(-1.3 - 1.2 * (baglilik - 3.5) - .07 * kidem)))\nayrildi_mi = (rng.random(n) < p_ayrilma).astype(int)\n\ncalisanlar = pd.DataFrame({\n    \"sicil_no\": [f\"S{1000 + i}\" for i in range(n)],\n    \"departman\": dept, \"cinsiyet\": cinsiyet, \"seviye\": seviye,\n    \"yas\": np.clip(23 + kidem + rng.normal(5, 4, n), 21, 64).round().astype(int),\n    \"kidem\": kidem, \"maas\": maas, \"performans\": performans, \"baglilik\": baglilik,\n    \"egitim_saati\": egitim_saati, \"devamsizlik\": rng.poisson(6 - baglilik),\n    \"ayrildi_mi\": ayrildi_mi,\n})\ncalisanlar[\"ayrildi\"] = np.where(ayrildi_mi == 1, \"Evet\", \"Hayır\")\ncalisanlar[\"yonetici_mi\"] = calisanlar[\"seviye\"].eq(\"Yönetici\")\n\n# Aylık işgücü hareketleri (2023-2025)\ntarih = pd.date_range(\"2023-01-01\", \"2025-12-01\", freq=\"MS\")\nmevsim = 1 + .25 * np.sin(2 * np.pi * (tarih.month - 3) / 12)\naylik = pd.DataFrame({\"tarih\": tarih, \"ise_alim\": rng.poisson(26 * mevsim),\n                      \"ayrilma\": rng.poisson(20 * mevsim[::-1])})\naylik[\"kadro\"] = 1200 + (aylik[\"ise_alim\"] - aylik[\"ayrilma\"]).cumsum()\n\n# Çalışan memnuniyeti anketi (geniş format, 1-5 puan)\nanket = pd.DataFrame({b: np.clip(rng.normal(m, .8, 120), 1, 5).round(1) for b, m in\n                      [(\"ucret\", 2.9), (\"yonetici\", 3.6), (\"ekip\", 4.0), (\"gelisim\", 3.2), (\"denge\", 3.4)]})\n\n# Departman x ay memnuniyet matrisi (0-1)\naylar_tr = [\"Oca\", \"Şub\", \"Mar\", \"Nis\", \"May\", \"Haz\", \"Tem\", \"Ağu\", \"Eyl\", \"Eki\", \"Kas\", \"Ara\"]\nmemnuniyet = pd.DataFrame(rng.random((6, 12)).round(2), index=departmanlar, columns=aylar_tr)\n\n# Eğitim saati - performans artışı (x, y)\negitim = pd.DataFrame({\"egitim_saati\": np.arange(1, 101)})\negitim[\"performans_artisi\"] = (.08 * egitim[\"egitim_saati\"] + rng.normal(0, 2, 100)).round(2)\n\nprint(\"calisanlar:\", calisanlar.shape, \"| aylik:\", aylik.shape, \"| anket:\", anket.shape,\n      \"| memnuniyet:\", memnuniyet.shape, \"| egitim:\", egitim.shape)\ncalisanlar.head()", "paketler": ["numpy", "pandas", "matplotlib"], "micropip": ["seaborn"], "motor": "\nimport sys, io, ast, traceback, json, warnings, base64, re as _re\nimport js\nwarnings.filterwarnings(\"ignore\")\ntry:\n    import pandas as pd\n    pd.set_option(\"display.width\", 140)\nexcept ImportError:\n    pd = None\n\n_ONCESI = \"import matplotlib.pyplot as plt\\nimport seaborn as sns\\nplt.close('all')\\nsns.set_theme()\"\n_bekleyen = []\n\ndef indir(dosya):\n    js.indirDosya(dosya)\n    print(\"İndiriliyor:\", dosya)\n\ndef pano_kopyala(tablo):\n    metin = tablo.to_csv(sep=\"\\t\", index=False) if hasattr(tablo, \"to_csv\") else str(tablo)\n    js.panoyaYaz(metin)\n    print(\"Panoya kopyalandı.\")\n\nclass HTMLCikti:\n    def __init__(self, h): self.h = h\n    def _repr_html_(self): return self.h\n    def __repr__(self): return \"<HTML çıktı>\"\n\ndef _fig_topla():\n    plt = sys.modules.get(\"matplotlib.pyplot\")\n    if plt is None:\n        return\n    for n in plt.get_fignums():\n        f = plt.figure(n)\n        b = io.BytesIO()\n        f.savefig(b, format=\"png\", dpi=90, bbox_inches=\"tight\")\n        _bekleyen.append(base64.b64encode(b.getvalue()).decode())\n    plt.close(\"all\")\n\ndef _goster(*a, **k):\n    _fig_topla()\n\ndef _matplotlib_hazirla():\n    if \"matplotlib\" in sys.modules or True:\n        import matplotlib\n        matplotlib.use(\"agg\")\n        import matplotlib.pyplot as plt\n        plt.show = _goster\n\n_matplotlib_hazirla()\n\n# ---------- regex görselleştirme ----------\ndef vurgula(desen, metin, bayrak=0):\n    \"\"\"Desenin metindeki tüm eşleşmelerini renkli işaretler, grupları tabloya döker.\"\"\"\n    import html as _h\n    rx = _re.compile(desen, bayrak) if isinstance(desen, str) else desen\n    parcalar, son, eslesmeler = [], 0, list(rx.finditer(metin))\n    for m in eslesmeler:\n        parcalar.append(_h.escape(metin[son:m.start()]))\n        if m.start() == m.end():\n            parcalar.append('<span class=\"bos\" title=\"boş eşleşme\"><\/span>')\n        else:\n            parcalar.append('<span class=\"es\" title=\"%d-%d\">%s<\/span>' % (m.start(), m.end(), _h.escape(m.group())))\n        son = m.end()\n    parcalar.append(_h.escape(metin[son:]))\n    bos = sum(1 for m in eslesmeler if m.start() == m.end())\n    ozet = \"%d eşleşme\" % len(eslesmeler) + (\" (%d boş eşleşme kırmızı çizgiyle)\" % bos if bos else \"\")\n    tablo = \"\"\n    gruplu = [m for m in eslesmeler if m.groups() or m.groupdict()]\n    if eslesmeler and (gruplu or len(eslesmeler) <= 12):\n        adlar = {v: k for k, v in rx.groupindex.items()}\n        bas = \"\".join(\"<th>%s<\/th>\" % (\"grup %d\" % i + (\" (%s)\" % adlar[i] if i in adlar else \"\")) for i in range(1, rx.groups + 1))\n        satirlar = \"\".join(\n            \"<tr><td>%d<\/td><td>%d–%d<\/td><td>%s<\/td>%s<\/tr>\" % (\n                j + 1, m.start(), m.end(), _h.escape(repr(m.group())),\n                \"\".join(\"<td>%s<\/td>\" % _h.escape(repr(g)) for g in m.groups()))\n            for j, m in enumerate(eslesmeler[:30]))\n        tablo = '<table class=\"rx-tablo\"><tr><th>#<\/th><th>konum<\/th><th>eşleşme<\/th>%s<\/tr>%s<\/table>' % (bas, satirlar)\n    return HTMLCikti('<div class=\"rx-ozet\">Desen: <code>%s<\/code> · %s<\/div><div class=\"rx-metin\">%s<\/div>%s' % (\n        _h.escape(rx.pattern), ozet, \"\".join(parcalar), tablo))\n\ndef _regex_test(desen, metin, bayraklar):\n    try:\n        b = 0\n        for c in bayraklar:\n            b |= {\"i\": _re.I, \"m\": _re.M, \"s\": _re.S, \"x\": _re.X, \"a\": _re.A}[c]\n        return vurgula(desen, metin, b).h\n    except _re.error as e:\n        return '<pre class=\"hata\">Desen hatası: %s<\/pre>' % e\n\ndef _yeni_ns():\n    return {\"indir\": indir, \"pano_kopyala\": pano_kopyala, \"vurgula\": vurgula, \"HTMLCikti\": HTMLCikti}\n\ndef _tablo_html(sonuc):\n    if isinstance(sonuc, pd.Series):\n        sonuc = sonuc.to_frame()\n    return sonuc.to_html(max_rows=20, max_cols=14, border=0, na_rep=\"NaN\"), \"%d satır × %d sütun\" % sonuc.shape\n\ndef _grafik_nesnesi(x):\n    if isinstance(x, (list, tuple)):\n        return len(x) > 0 and all(_grafik_nesnesi(e) for e in x)\n    mod = type(x).__module__ or \"\"\n    return mod.startswith((\"matplotlib\", \"seaborn\")) or (hasattr(x, \"shape\") and mod.startswith(\"numpy\") and x.dtype == object)\n\ndef _calistir(kod, g):\n    tampon = io.StringIO()\n    eski = sys.stdout, sys.stderr\n    sys.stdout = sys.stderr = tampon\n    html = boyut = hata = None\n    del _bekleyen[:]\n    try:\n        if _ONCESI:\n            exec(_ONCESI, g)\n        _matplotlib_hazirla()\n        agac = ast.parse(kod)\n        son = None\n        if agac.body and isinstance(agac.body[-1], ast.Expr):\n            son = ast.Expression(agac.body.pop().value)\n        exec(compile(agac, \"<hücre>\", \"exec\"), g)\n        if son is not None:\n            sonuc = eval(compile(son, \"<hücre>\", \"eval\"), g)\n            if pd is not None and isinstance(sonuc, (pd.DataFrame, pd.Series)):\n                html, boyut = _tablo_html(sonuc)\n            elif hasattr(sonuc, \"_repr_html_\") and not hasattr(sonuc, \"figure\") and not hasattr(sonuc, \"fig\"):\n                html = sonuc._repr_html_()\n            elif sonuc is not None and not _grafik_nesnesi(sonuc):\n                print(repr(sonuc))\n    except Exception:\n        hata = traceback.format_exc(limit=-2)\n    finally:\n        sys.stdout, sys.stderr = eski\n    try:\n        _fig_topla()\n    except Exception:\n        pass\n    return json.dumps({\"cikti\": tampon.getvalue(), \"html\": html, \"boyut\": boyut,\n                       \"gorseller\": list(_bekleyen), \"hata\": hata})\n"}</script>
+
+<script>
+const SAYFA = JSON.parse(document.getElementById("sayfaVerisi").textContent);
+const BOLUMLER = SAYFA.bolumler;
+const ESANLAM = SAYFA.esanlam;
+let pyodide = null, hazir = false, ns = null;
+const kartlar = [];
+let aktifBolum = "hepsi";
+
+const durum = (y, c) => { document.getElementById("durumYazi").textContent = y;
+  document.getElementById("durumNokta").className = "nokta" + (c ? " " + c : ""); };
+const kac = t => String(t).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]));
+const sade = t => t.toLocaleLowerCase("tr").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/ı/g, "i");
+const norm = t => sade(t).replace(/\s+/g, " ");
+
+function kartOlustur(o, bolum) {
+  const el = document.createElement("div");
+  el.className = "kart";
+  el.innerHTML = `<div class="kart-bas"><span class="komut"></span></div>
+    <div class="aciklama"></div>${o.en ? `<div class="ingilizce">${kac(o.en)}</div>` : ""}
+    ${o.not ? `<div class="uyari">⚠ ${kac(o.not)}</div>` : ""}<div class="hucre-yer"></div>`;
+  el.querySelector(".komut").textContent = o.k;
+  el.querySelector(".aciklama").textContent = o.tr;
+  const hucre = hucreOlustur(el.querySelector(".hucre-yer"), o.kod);
+  const metin = norm([o.k, o.tr, o.en || "", o.not || "", o.kod, bolum.baslik, bolum.en || ""].join(" "));
+  kartlar.push({el, bolum: bolum.id, metin, hucre, o});
+  return el;
+}
+
+function hucreOlustur(yer, kod) {
+  yer.innerHTML = `<div class="hucre"><div class="hucre-ust"><span>Python</span>
+    <div class="btns"><button class="kopyala" title="Kodu kopyala">⧉</button><button class="sifirla" title="Özgün koda dön">↺</button>
+    <button class="calistir" ${hazir ? "" : "disabled"}>▶ Çalıştır</button></div></div>
+    <textarea class="kod" spellcheck="false"></textarea></div><div class="cikti"></div>`;
+  const ta = yer.querySelector("textarea"), cikti = yer.querySelector(".cikti");
+  ta.value = kod;
+  const boyutla = () => { ta.style.height = "auto"; ta.style.height = (ta.scrollHeight + 4) + "px"; };
+  ta.addEventListener("input", boyutla); requestAnimationFrame(boyutla);
+  ta.addEventListener("keydown", e => {
+    if (e.key === "Tab") { e.preventDefault(); const p = ta.selectionStart;
+      ta.value = ta.value.slice(0, p) + "    " + ta.value.slice(ta.selectionEnd); ta.selectionStart = ta.selectionEnd = p + 4; }
+    if ((e.ctrlKey || e.shiftKey) && e.key === "Enter") { e.preventDefault(); h.calistir(); }
+  });
+  const h = { ta, cikti, btn: yer.querySelector(".calistir"), calistir: () => calistir(h) };
+  h.btn.onclick = h.calistir;
+  yer.querySelector(".sifirla").onclick = () => { ta.value = kod; boyutla(); cikti.innerHTML = ""; };
+  yer.querySelector(".kopyala").onclick = () => navigator.clipboard?.writeText(ta.value);
+  return h;
+}
+
+const kapsayici = document.getElementById("bolumler");
+const toc = document.getElementById("icindekiler");
+const cipler = document.getElementById("cipler");
+cipler.innerHTML = `<span class="cip aktif" data-b="hepsi">Tümü<span class="say"></span></span>`;
+BOLUMLER.forEach((b, i) => {
+  const sec = document.createElement("div");
+  sec.className = "bolum"; sec.id = "b-" + b.id;
+  sec.innerHTML = `<h2>${i + 1}. ${kac(b.baslik)} ${b.en ? `<span style="font-weight:400;color:#9ca3af;font-size:.85rem">· ${kac(b.en)}</span>` : ""}</h2>
+    ${b.ac ? `<div class="bolum-ac">${b.ac}</div>` : ""}`;
+  b.ogeler.forEach(o => sec.appendChild(kartOlustur(o, b)));
+  kapsayici.appendChild(sec);
+  toc.insertAdjacentHTML("beforeend", `<a href="#b-${b.id}" data-b="${b.id}"><span>${i + 1}. ${kac(b.baslik)}</span><span class="say"></span></a>`);
+  cipler.insertAdjacentHTML("beforeend", `<span class="cip" data-b="${b.id}">${kac(b.baslik)}<span class="say"></span></span>`);
+});
+const kurulumHucre = hucreOlustur(document.getElementById("kurulumHucre"), SAYFA.kurulum);
+
+function vurgula(metin, terimler) {
+  if (!terimler.length) return kac(metin);
+  const n = sade(metin);
+  if (n.length !== metin.length) return kac(metin);
+  const isaret = new Array(metin.length).fill(false);
+  terimler.forEach(t => { let i = n.indexOf(t); while (t && i > -1) { for (let j = i; j < i + t.length; j++) isaret[j] = true; i = n.indexOf(t, i + 1); } });
+  let s = "", acik = false;
+  for (let i = 0; i < metin.length; i++) {
+    if (isaret[i] && !acik) { s += "<mark>"; acik = true; }
+    if (!isaret[i] && acik) { s += "</mark>"; acik = false; }
+    s += kac(metin[i]);
+  }
+  return s + (acik ? "</mark>" : "");
+}
+
+function eslesir(k, t) {
+  if (k.metin.includes(t)) return true;
+  const ek = Object.entries(ESANLAM).find(([a]) => a.startsWith(t) || (t.length > 3 && t.startsWith(a)));
+  return ek ? ek[1].split(" ").some(e => e && k.metin.includes(norm(e))) : false;
+}
+
+function ara() {
+  const q = norm(document.getElementById("ara").value).trim();
+  const terimler = q ? q.split(" ").filter(Boolean) : [];
+  let gorunen = 0; const sayac = {};
+  kartlar.forEach(k => {
+    const ok = terimler.every(t => eslesir(k, t));
+    const goster = ok && (aktifBolum === "hepsi" || k.bolum === aktifBolum);
+    k.el.style.display = goster ? "" : "none";
+    if (ok) sayac[k.bolum] = (sayac[k.bolum] || 0) + 1;
+    if (goster) gorunen++;
+    k.el.querySelector(".komut").innerHTML = vurgula(k.o.k, terimler);
+    k.el.querySelector(".aciklama").innerHTML = vurgula(k.o.tr, terimler);
+  });
+  BOLUMLER.forEach(b => {
+    const say = sayac[b.id] || 0;
+    document.getElementById("b-" + b.id).style.display = (say > 0 && (aktifBolum === "hepsi" || aktifBolum === b.id)) ? "" : "none";
+    const a = toc.querySelector(`[data-b="${b.id}"]`);
+    a.querySelector(".say").textContent = say; a.classList.toggle("bos", !say);
+    cipler.querySelector(`[data-b="${b.id}"] .say`).textContent = say;
+  });
+  cipler.querySelector(`[data-b="hepsi"] .say`).textContent = Object.values(sayac).reduce((a, b) => a + b, 0);
+  const filtreli = terimler.length || aktifBolum !== "hepsi";
+  document.getElementById("b-veri").style.display = filtreli ? "none" : "";
+  document.getElementById("bulunamadi").style.display = gorunen ? "none" : "block";
+  document.getElementById("sonucSayisi").textContent = filtreli ? `${gorunen} komut gösteriliyor` : `${kartlar.length} komut`;
+}
+document.getElementById("ara").addEventListener("input", ara);
+document.addEventListener("keydown", e => {
+  const tag = document.activeElement.tagName;
+  if (e.key === "/" && tag !== "TEXTAREA" && tag !== "INPUT") { e.preventDefault(); document.getElementById("ara").focus(); }
+  if (e.key === "Escape" && document.activeElement.id === "ara") { e.target.value = ""; ara(); }
+});
+cipler.addEventListener("click", e => {
+  const c = e.target.closest(".cip"); if (!c) return;
+  aktifBolum = c.dataset.b;
+  cipler.querySelectorAll(".cip").forEach(x => x.classList.toggle("aktif", x === c));
+  ara(); window.scrollTo({top: document.querySelector(".yerlesim").offsetTop - 130, behavior: "smooth"});
+});
+document.querySelectorAll(".oneriler a").forEach(a => a.onclick = () => { document.getElementById("ara").value = a.dataset.q; ara(); });
+ara();
+
+window.indirDosya = ad => {
+  const veri = pyodide.FS.readFile(ad);
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([veri])); a.download = ad.split("/").pop(); a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+};
+window.panoyaYaz = metin => navigator.clipboard?.writeText(metin).catch(() => {});
+
+function ciktiYaz(h, r) {
+  h.cikti.innerHTML = "";
+  if (r.cikti) { const p = document.createElement("pre"); p.textContent = r.cikti; h.cikti.appendChild(p); }
+  if (r.html) h.cikti.insertAdjacentHTML("beforeend", `<div class="html-sar">${r.html}</div>${r.boyut ? `<div class="boyut">${r.boyut}</div>` : ""}`);
+  (r.gorseller || []).forEach((g, i) => h.cikti.insertAdjacentHTML("beforeend",
+    `<div class="img-sar"><a download="grafik_${i + 1}.png" href="data:image/png;base64,${g}">⬇ PNG</a><img alt="grafik" src="data:image/png;base64,${g}"></div>`));
+  if (r.hata) { const p = document.createElement("pre"); p.className = "hata"; p.textContent = r.hata; h.cikti.appendChild(p); }
+}
+
+function calistir(h) {
+  if (!hazir) return;
+  h.btn.disabled = true; h.btn.textContent = "⏳";
+  try { ciktiYaz(h, JSON.parse(pyodide.globals.get("_calistir")(h.ta.value, ns))); }
+  catch (e) { h.cikti.innerHTML = `<pre class="hata">${kac(String(e))}</pre>`; }
+  h.btn.disabled = false; h.btn.textContent = "▶ Çalıştır";
+}
+const bekle = () => new Promise(r => setTimeout(r, 15));
+
+async function baslat() {
+  try {
+    durum("Pyodide yükleniyor…");
+    pyodide = await loadPyodide();
+    durum("Paketler yükleniyor: " + SAYFA.paketler.join(", ") + "…");
+    await pyodide.loadPackage(SAYFA.paketler.concat(["micropip"]));
+    const eksikler = [];
+    for (const pk of SAYFA.micropip) {
+      durum(pk + " kuruluyor…");
+      try { await pyodide.runPythonAsync(`import micropip\nawait micropip.install(${JSON.stringify(pk)})`); }
+      catch (e) { eksikler.push(pk); console.warn(pk, e); }
+    }
+    pyodide.runPython(SAYFA.motor);
+    ns = pyodide.globals.get("_yeni_ns")();
+    hazir = true;
+    document.querySelectorAll(".calistir").forEach(b => b.disabled = false);
+    ["veriSifirla", "gorunenleriCalistir"].forEach(id => document.getElementById(id).disabled = false);
+    calistir(kurulumHucre);
+    durum(eksikler.length ? "Hazır (yüklenemeyen: " + eksikler.join(", ") + ")" : "Hazır: veri setleri yüklendi", "hazir");
+    if (window.sayfaHazir) window.sayfaHazir();
+  } catch (e) { durum("Yükleme hatası: " + e.message, "hata"); console.error(e); }
+}
+document.getElementById("veriSifirla").onclick = () => { calistir(kurulumHucre); durum("Veri sıfırlandı", "hazir"); };
+document.getElementById("gorunenleriCalistir").onclick = async () => {
+  for (const k of kartlar) if (k.el.style.display !== "none" && k.el.closest(".bolum").style.display !== "none") { calistir(k.hucre); await bekle(); }
+};
+baslat();
+</script>
+
+<script>
+(function(){const q=new URLSearchParams(location.search).get("q");
+if(q){const a=document.getElementById("ara");a.value=q;a.dispatchEvent(new Event("input"));}})();
+</script>
+</body>
+</html>
